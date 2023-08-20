@@ -1,0 +1,42 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout>
+  <main class="flex justify-between items-end">
+    <section class="font-bold leading-none" style={{ fontSize: "16rem" }}>
+      AIRDOP
+      <br />
+       FR
+      <br />
+       THE
+      <br />
+       WE
+    </section>
+
+    <section class="flex gap-8">
+      <a
+        href="/send"
+        class:list={[
+          "bg-black text-white",
+          "px-6 py-3",
+          "rounded-lg",
+          "text-3xl",
+        ]}
+      >
+        Send
+      </a>
+      <a
+        href="/secret"
+        class:list={[
+          "text-black border-2 border-black",
+          "px-6 py-3",
+          "rounded-lg",
+          "text-3xl",
+        ]}
+      >
+        Receive
+      </a>
+    </section>
+  </main>
+</Layout>

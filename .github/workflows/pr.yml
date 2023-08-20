@@ -1,0 +1,41 @@
+name: Checks
+on: push
+
+jobs:
+  format:
+    name: "Check formatting"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "yarn"
+      - run: yarn
+      - run: yarn check:format
+
+  types:
+    name: "Check types"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "yarn"
+      - run: yarn
+      - run: yarn api check:types
+      - run: yarn protocol check:types
+      - run: yarn ui check:types
+
+  test:
+    name: "Run tests"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: "yarn"
+      - run: yarn
+      - run: yarn protocol test

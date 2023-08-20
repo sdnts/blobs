@@ -1,0 +1,35 @@
+{
+  "packageManager": "yarn@3.2.4",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "api": "yarn workspace @blobs/api",
+    "ui": "yarn workspace @blobs/ui",
+    "protocol": "yarn workspace @blobs/protocol",
+    "format": "prettier -w . --ignore-path .gitignore",
+    "check:format": "prettier -c . --ignore-path .gitignore"
+  },
+  "devDependencies": {
+    "prettier": "3.0.2",
+    "prettier-plugin-astro": "0.11.1"
+  },
+  "prettier": {
+    "trailingComma": "es5",
+    "plugins": [
+      "prettier-plugin-astro"
+    ],
+    "overrides": [
+      {
+        "files": "*.astro",
+        "options": {
+          "parser": "astro"
+        }
+      }
+    ]
+  },
+  "resolutions": {
+    "react-dropzone@14.2.3": "patch:react-dropzone@npm%3A14.2.3#./.yarn/patches/react-dropzone-npm-14.2.3-b5d5b11ea4.patch"
+  }
+}

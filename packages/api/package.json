@@ -1,0 +1,18 @@
+{
+  "name": "@blobs/api",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "check:types": "tsc"
+  },
+  "devDependencies": {
+    "@blobs/protocol": "workspace:*",
+    "@cloudflare/workers-types": "4.20230814.0",
+    "ts-results": "3.3.0",
+    "typescript": "5.1.6",
+    "wrangler": "3.5.1"
+  }
+}
