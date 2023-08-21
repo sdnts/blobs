@@ -38,12 +38,15 @@ export class Context {
     this.waitUntil(
       fetch("https://in.sdnts.dev/m", {
         method: "POST",
+        headers: {
+          Origin: "https://blob.city",
+        },
         body: JSON.stringify({
           name: "request",
-          method: "",
-          path: "",
-          status: "",
-          rayId: "",
+          rayId: this.tags.rayId,
+          method: this.tags.method,
+          path: this.tags.path,
+          status: this.tags.status,
         }),
       })
     );

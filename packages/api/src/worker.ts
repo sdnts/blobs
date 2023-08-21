@@ -4,6 +4,8 @@ import { route } from "./router";
 
 export type Env = {
   environment: "production" | "development";
+  allowedOrigins: string[];
+  secret: string;
   metadata: KVNamespace;
   sessions: DurableObjectNamespace;
 };
@@ -15,10 +17,12 @@ export default {
     executionCtx: ExecutionContext
   ): Promise<Response> {
     const ctx = new Context(env, executionCtx.waitUntil);
+    const url = new URL(request.url);
 
     ctx.setTags({
-      url: request.url,
       rayId: request.headers.get("cf-ray") ?? undefined,
+      method: request.method,
+      path: url.pathname,
     });
 
     try {

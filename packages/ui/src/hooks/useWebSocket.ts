@@ -1,5 +1,5 @@
 import { Message, MessageCode, deserialize, serialize } from "@blobs/protocol";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const WS_SCHEME = import.meta.env.PUBLIC_API_HOST.startsWith("localhost")
   ? "ws://"
@@ -21,6 +21,7 @@ export function useWebSocket({
 }: Params = {}) {
   const messageBuffer = useRef<Message[]>([]);
   const websocket = useRef<WebSocket>();
+  const [secret, setSecret] = useState<string>();
 
   useEffect(() => {
     let keepalive: NodeJS.Timer;
@@ -61,6 +62,10 @@ export function useWebSocket({
     ws.addEventListener("close", (e) => onClose?.(e), { signal: abort.signal });
 
     websocket.current = ws;
+    const cookies = Object.fromEntries(
+      document.cookie.split(";").map((c) => c.trim().split("="))
+    );
+    setSecret(cookies.secret);
 
     return () => {
       abort.abort();
@@ -70,6 +75,7 @@ export function useWebSocket({
   }, []);
 
   return {
+    secret,
     send: (message: Message) => {
       if (
         !websocket.current ||

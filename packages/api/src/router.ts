@@ -1,61 +1,75 @@
+import { customAlphabet } from "nanoid";
 import { Ok, Result } from "ts-results";
 import { Context } from "./context";
+import { decrypt } from "./cookie";
 import { BlobError, errors } from "./errors";
-import { CONNECTION_TIMEOUT, SESSION_TIMEOUT } from "./session";
 
-const allowedOrigins = ["http://localhost:8787", "https://blob.city"];
-
-type Metadata = {
-  actorId: string;
-  ipLock?: string;
-};
+const nanoid = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 6);
 
 export const route = async (
   request: Request,
   ctx: Context
 ): Promise<Result<DurableObjectId, BlobError>> => {
-  if (ctx.env.environment === "production") {
-    const origin = request.headers.get("Origin");
-    if (!allowedOrigins.includes(origin!))
-      return errors.badRequest("Unrecognized origin");
+  if (request.method !== "GET") return errors.badRequest("Bad Method");
+
+  let ip = request.headers.get("cf-connecting-ip");
+  if (ctx.env.environment === "development") ip = "127.0.0.1";
+  if (!ip) return errors.unknown("Missing IP");
+
+  const cookie = request.headers.get("cookie");
+
+  // First check to see if we can find an actorId in a cookie
+  if (cookie) {
+    const cookies: Record<string, string> = Object.fromEntries(
+      cookie
+        .split(";")
+        .filter((c) => !!c)
+        .map((c) => c.trim().split("="))
+    );
+
+    if (cookies.auth) {
+      const auth = await decrypt(cookies.auth, ctx);
+      if (auth.err) return errors.unauthorized("Malformed auth cookie");
+
+      const [actorId, lockedIp] = auth.val.split(":");
+      if (!actorId || !lockedIp)
+        return errors.internalError("Malformed auth cookie");
+
+      if (ip !== lockedIp) return errors.unauthorized("Unauthorized IP");
+
+      return Ok(ctx.env.sessions.idFromString(actorId));
+    }
   }
 
-  const { pathname } = new URL(request.url);
+  const { pathname, searchParams } = new URL(request.url);
 
-  if (request.method === "GET" && pathname === "/new") {
-    const upgrade = request.headers.get("Upgrade");
-    if (!upgrade) return errors.badRequest("Missing Upgrade header");
-    if (upgrade !== "websocket")
-      return errors.badRequest("Invalid Upgrade header");
+  switch (pathname) {
+    case "/new": {
+      const upgrade = request.headers.get("Upgrade");
+      if (!upgrade) return errors.badRequest("Missing Upgrade header");
+      if (upgrade !== "websocket")
+        return errors.badRequest("Invalid Upgrade header");
 
-    const sessionId = "000000";
-    ctx.setTags({ sessionId });
+      return Ok(ctx.env.sessions.newUniqueId());
+    }
 
-    const actorId = ctx.env.sessions.newUniqueId();
+    case "/join": {
+      // We can now assume that this is the first time a client is connecting to
+      // this session
+      const secret = searchParams.get("s");
+      if (!secret) return errors.badRequest("Missing secret");
 
-    const metadata: Metadata = { actorId: actorId.toString() };
-    await ctx.env.metadata.put(sessionId, JSON.stringify(metadata), {
-      // Supply a short expiration time for new sessions to control churn.
-      // When a receiver connects, it will extend the expiration to something longer.
-      expirationTtl: CONNECTION_TIMEOUT / 1000,
-    });
+      const actorId = await ctx.env.metadata.get(secret);
+      if (!actorId) return errors.unauthorized("Incorrect secret");
 
-    return Ok(actorId);
+      return Ok(ctx.env.sessions.idFromString(actorId));
+    }
+
+    case "/download": {
+      // Client must have a cookie to do this
+      return errors.badRequest("No auth cookie");
+    }
   }
 
-  const [_, sessionId] = pathname.split("/");
-  if (!sessionId) return errors.badRequest("Missing session id");
-
-  ctx.setTags({ sessionId });
-
-  const metadata = await ctx.env.metadata.get(sessionId);
-  if (!metadata) return errors.notFound();
-
-  const { actorId }: Metadata = JSON.parse(metadata);
-  await ctx.env.metadata.put(sessionId, metadata, {
-    // Extend TTL since a receiver connected
-    expirationTtl: SESSION_TIMEOUT / 1000,
-  });
-
-  return Ok(ctx.env.sessions.idFromString(actorId));
+  return errors.badRequest("Bad pathname");
 };

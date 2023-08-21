@@ -1,24 +1,44 @@
 import { MessageCode, type Message } from "@blobs/protocol";
-import { useEffect, useRef } from "react";
+import { useRef, useState } from "react";
 
 const ES_HOST = import.meta.env.PUBLIC_API_HOST;
 
-type Params = {
+type Options = {
   onOpen?: (e: Event) => void;
   onMessage?: (e: Message) => void;
   onError?: (e: Event) => void;
   onClose?: (e: CloseEvent) => void;
 };
 
-export function useSSE({ onOpen, onMessage, onError, onClose }: Params = {}) {
+export function useSSE({ onOpen, onMessage, onError, onClose }: Options = {}) {
+  const [connecting, setConnecting] = useState(false);
+  const [connected, setConnected] = useState(false);
   const eventSource = useRef<EventSource>();
 
-  useEffect(() => {
-    const abort = new AbortController();
-    const es = new EventSource(`//${ES_HOST}/000000/join`);
+  const connect = (secret: string) => {
+    setConnecting(true);
 
-    es.addEventListener("open", (e) => onOpen?.(e), { signal: abort.signal });
-    es.addEventListener("error", (e) => onError?.(e), { signal: abort.signal });
+    const abort = new AbortController();
+    const es = new EventSource(`//${ES_HOST}/join?s=${secret.toUpperCase()}`);
+
+    es.addEventListener(
+      "open",
+      (e) => {
+        setConnecting(false);
+        setConnected(true);
+        onOpen?.(e);
+      },
+      { signal: abort.signal }
+    );
+
+    es.addEventListener(
+      "error",
+      (e) => {
+        setConnected(false);
+        onError?.(e);
+      },
+      { signal: abort.signal }
+    );
 
     es.addEventListener(
       "message",
@@ -28,14 +48,23 @@ export function useSSE({ onOpen, onMessage, onError, onClose }: Params = {}) {
 
         try {
           const data = JSON.parse(e.data);
+          console.log("SSE event", data);
 
-          if (!data.name) throw new Error("Malformed: `name` is missing");
-          if (!data.size) throw new Error("Malformed: `size` is missing");
+          if (data.id === undefined)
+            throw new Error("Malformed: `id` is missing");
+          if (data.name === undefined)
+            throw new Error("Malformed: `name` is missing");
+          if (data.size === undefined)
+            throw new Error("Malformed: `size` is missing");
+          if (data.type === undefined)
+            throw new Error("Malformed: `type` is missing");
 
           onMessage?.({
             code: MessageCode.Metadata,
+            id: data.id,
             name: data.name,
             size: data.size,
+            type: data.type,
           });
         } catch (e) {}
       },
@@ -48,5 +77,11 @@ export function useSSE({ onOpen, onMessage, onError, onClose }: Params = {}) {
       abort.abort();
       es.close();
     };
-  }, []);
+  };
+
+  return {
+    connect,
+    connecting,
+    connected,
+  };
 }

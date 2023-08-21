@@ -1,40 +1,65 @@
 import { describe, expect, test } from "vitest";
 import { Message, MessageCode, deserialize, serialize } from "../src";
 
-describe("self-compat", () => {
+describe("Message", () => {
   test.each<[string, Message]>([
     ["Joined", { code: MessageCode.Joined }],
-    ["Metadata", { code: MessageCode.Metadata, name: "signature", size: 24 }],
     [
       "Metadata",
-      { code: MessageCode.Metadata, name: "name:with:colons", size: 10 },
+      {
+        code: MessageCode.Metadata,
+        id: 1,
+        name: "signature",
+        size: 24,
+        type: "text/plain",
+      },
     ],
     [
       "Metadata",
       {
         code: MessageCode.Metadata,
-        name: "Spider.Man.Across.The.Spiderverse.mov",
-        size: 500 * 1024 * 1024, // 500 MiB
+        id: 2,
+        name: "name:with:colons",
+        size: 10,
+        type: "application/json",
       },
     ],
-    ["Request", { code: MessageCode.Request, name: "secrets.txt" }],
     [
-      "Data",
+      "Metadata",
       {
-        code: MessageCode.Data,
-        length: 4,
+        code: MessageCode.Metadata,
+        id: 3,
+        name: "Spider.Man.Across.The.Spiderverse.mov",
+        size: 500 * 1024 * 1024, // 500 MiB
+        type: "video/mov",
+      },
+    ],
+    ["DataRequest", { code: MessageCode.DataRequest, id: 1 }],
+    [
+      "DataChunk",
+      {
+        code: MessageCode.DataChunk,
+        id: 2,
+        offset: 0,
         bytes: new Uint8Array([1, 2, 3, 4]),
       },
     ],
     [
-      "Data",
+      "DataChunk",
       {
-        code: MessageCode.Data,
-        length: 64 * 1024, // 64 KiB
+        code: MessageCode.DataChunk,
+        id: 3,
+        offset: 128,
         bytes: new Uint8Array(65536),
       },
     ],
-    ["Sent", { code: MessageCode.Sent }],
+    [
+      "DataChunkEnd",
+      {
+        code: MessageCode.DataChunkEnd,
+        id: 3,
+      },
+    ],
     ["Keepalive", { code: MessageCode.Keepalive }],
   ])("%s", (_, message: Message) => {
     const serialized = serialize(message);

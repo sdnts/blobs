@@ -14,7 +14,7 @@ export type BlobError =
   | BlobErrorBase<"BadRequest">
   | BlobErrorBase<"InternalError">
   | BlobErrorBase<"NotFound">
-  | BlobErrorBase<"Unimplemented">
+  | BlobErrorBase<"Unauthorized">
   | BlobErrorBase<"Unknown">;
 
 export const errors = {
@@ -34,21 +34,21 @@ export const errors = {
       cause,
     }),
 
-  notFound: (message?: string): Err<BlobError> =>
+  notFound: (message: string): Err<BlobError> =>
     Err({
       type: "NotFound",
       status: 404,
-      message: message ?? "No room with that ID",
+      message,
     }),
 
   serializationError: (cause: string, message?: string): Err<BlobError> =>
     errors.internalError(cause, message),
 
-  unimplemented: (action: string, message?: string): Err<BlobError> =>
+  unauthorized: (message?: string): Err<BlobError> =>
     Err({
-      type: "Unimplemented",
-      status: 501,
-      message: message ?? `${action} is not yet implemeted`,
+      type: "Unauthorized",
+      status: 403,
+      message: message ?? `You aren't allowed to see that`,
     }),
 
   unknown: (cause: string, message?: string): Err<BlobError> =>
@@ -57,7 +57,7 @@ export const errors = {
       status: 500,
       message:
         message ??
-        "An unknown internal error occured while handling that action",
+        "An unknown internal error occured while handling your request",
       cause,
     }),
 };

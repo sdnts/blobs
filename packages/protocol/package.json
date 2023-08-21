@@ -8,10 +8,12 @@
   "scripts": {
     "postinstall": "yarn build",
     "check:types": "tsc",
+    "dev": "yarn build --watch",
     "test": "vitest",
     "build": "tsup src/index.ts --clean --dts --format esm,cjs"
   },
   "devDependencies": {
+    "msgpackr": "1.9.7",
     "ts-results": "3.3.0",
     "tsup": "7.2.0",
     "typescript": "5.1.6",
