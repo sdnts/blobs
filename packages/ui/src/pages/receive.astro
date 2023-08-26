@@ -1,8 +1,10 @@
 ---
+import { Header } from "../components/Header";
+import { Receiver } from "../components/Receiver";
 import Layout from "../layouts/Layout.astro";
-import { Receive as App } from "../components/Receive";
 ---
 
 <Layout>
-  <App client:load />
+  <Header client:idle mode="receiver" />
+  <Receiver client:load />
 </Layout>

@@ -1,8 +1,10 @@
 ---
-import { Send as App } from "../components/Send";
+import { Header } from "../components/Header";
+import { Sender } from "../components/Sender";
 import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
-  <App client:load />
+  <Header client:idle mode="sender" />
+  <Sender client:load />
 </Layout>

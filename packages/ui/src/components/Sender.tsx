@@ -1,30 +1,70 @@
 import { Message, MessageCode } from "@blobs/protocol";
-import { CloudArrowUp } from "phosphor-react";
-import { useCallback, useRef } from "react";
+import { CloudArrowUp } from "@phosphor-icons/react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { useWebSocket } from "../hooks/useWebSocket";
+import clsx from "clsx";
+import { formatSize, useSenderStore } from "../state";
+import { animate, spring } from "motion";
 
-export const Send = () => {
-  const files = useRef<File[]>([]);
+export const Sender = () => {
+  const state = useSenderStore((store) => store.state);
+  const setState = useSenderStore((store) => store.setState);
+  useEffect(() => {
+    if (state === "ready") {
+      animate("#secret", { marginTop: "-3rem" }, { duration: 0.5 });
+      animate(
+        "#secret > span",
+        {
+          fontSize: "2.25rem",
+          lineHeight: "2.5rem",
+          letterSpacing: "0.05rem",
+        },
+        { duration: 0.5 }
+      );
+    }
+  }, [state]);
+
+  const files = useSenderStore((store) => store.files);
+  const addFile = useSenderStore((store) => store.addFile);
+  const removeFile = useSenderStore((store) => store.removeFile);
+
   const fileStreams = useRef<Array<ReadableStreamDefaultReader<Uint8Array>>>(
     []
   );
+
+  const { open, getRootProps, getInputProps, isDragActive } = useDropzone({
+    noClick: true,
+    noKeyboard: true,
+    preventDropOnDocument: true,
+    onDrop: (f) => {
+      f.forEach((f) => {
+        addFile(f);
+        wsSend({
+          code: MessageCode.Metadata,
+          id: 0,
+          name: f.name,
+          size: f.size,
+          type: f.type || "application/octet-stream",
+        });
+      });
+    },
+  });
 
   const onMessage = useCallback(
     async (message: Message) => {
       switch (message.code) {
         case MessageCode.Joined: {
-          console.log("Receiver joined");
+          setState("ready");
           break;
         }
 
         case MessageCode.DataRequest: {
           console.log("Receiver requesting", message.id, files, fileStreams);
 
-          if (!files.current) return;
           if (!fileStreams.current) return;
 
-          const file = files.current[message.id];
+          const file = files[message.id];
           if (!file) return;
 
           let stream = fileStreams.current[message.id];
@@ -80,37 +120,36 @@ export const Send = () => {
     [files]
   );
 
-  const { secret, send: wsSend } = useWebSocket({
-    onMessage,
-    onError: console.error,
-    onClose: console.info,
-  });
-
-  const { open, getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop: (f) => {
-      console.log("Dropped", f);
-      files.current = [...(files.current ?? []), ...f];
-      f.forEach((f) =>
-        wsSend({
-          code: MessageCode.Metadata,
-          id: 0,
-          name: f.name,
-          size: f.size,
-          type: f.type || "application/octet-stream",
-        })
-      );
-    },
-    noClick: true,
-  });
+  const { secret, send: wsSend } = useWebSocket({ onMessage });
 
   return (
-    <main className="flex-1 flex justify-center pt-36" {...getRootProps()}>
+    <main className="flex-1 flex flex-col items-center" {...getRootProps()}>
       <input {...getInputProps()} />
-      <section className="flex flex-col items-center gap-4">
-        <span className="text-gray text-2xl">This is your secret</span>
+      <section
+        id="secret"
+        className={clsx("flex flex-col items-center gap-4", "mt-36")}
+      >
+        {state !== "ready" && (
+          <span className="text-gray text-2xl tracking-normal">
+            Use this secret to receive
+          </span>
+        )}
         <span className="font-bold text-9xl tracking-widest">{secret}</span>
+      </section>
 
-        <div className="mt-36 flex gap-3 text-xl text-gray">
+      <section id="files" className="flex flex-col items-center">
+        {files.length > 0 && (
+          <ul className={clsx("mt-24 text-2xl", "grid grid-cols-2 gap-4")}>
+            {files.map((f) => (
+              <Fragment key={f.name}>
+                <li className="text-right">{f.name}</li>
+                <span className="text-gray">{formatSize(f.size)}</span>
+              </Fragment>
+            ))}
+          </ul>
+        )}
+
+        <div className="mt-36 flex flex-col items-center gap-3 text-2xl text-gray">
           <CloudArrowUp weight="bold" size={24} />
           {isDragActive ? (
             <div

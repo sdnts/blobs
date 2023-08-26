@@ -8,13 +8,27 @@ const config: Config = {
         white: "#EDEDED",
         black: "#232323",
         gray: "#7E7E7E",
+        lightGray: "#CECECE",
       },
       letterSpacing: {
         widest: "2rem",
       },
+      keyframes: {
+        slideInTop: {
+          "0%": {
+            transform: "translateY(-16rem)",
+          },
+          "100%": {
+            transform: "translateY(0)",
+          },
+        },
+      },
+      animation: {
+        slideInTop: "slideInTop 0.6s forwards cubic-bezier(0, 0.48, 0, 1)",
+      },
     },
     fontFamily: {
-      merchant: ["Merchant"],
+      sans: ["Merchant", "Impact"],
     },
   },
   plugins: [],

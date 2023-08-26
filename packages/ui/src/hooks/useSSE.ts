@@ -1,5 +1,6 @@
 import { MessageCode, type Message } from "@blobs/protocol";
-import { useRef, useState } from "react";
+import { useRef } from "react";
+import { useReceiverStore } from "../state";
 
 const ES_HOST = import.meta.env.PUBLIC_API_HOST;
 
@@ -11,12 +12,11 @@ type Options = {
 };
 
 export function useSSE({ onOpen, onMessage, onError, onClose }: Options = {}) {
-  const [connecting, setConnecting] = useState(false);
-  const [connected, setConnected] = useState(false);
+  const setState = useReceiverStore((s) => s.setState);
   const eventSource = useRef<EventSource>();
 
   const connect = (secret: string) => {
-    setConnecting(true);
+    setState("connecting");
 
     const abort = new AbortController();
     const es = new EventSource(`//${ES_HOST}/join?s=${secret.toUpperCase()}`);
@@ -24,8 +24,7 @@ export function useSSE({ onOpen, onMessage, onError, onClose }: Options = {}) {
     es.addEventListener(
       "open",
       (e) => {
-        setConnecting(false);
-        setConnected(true);
+        setState("ready");
         onOpen?.(e);
       },
       { signal: abort.signal }
@@ -34,7 +33,7 @@ export function useSSE({ onOpen, onMessage, onError, onClose }: Options = {}) {
     es.addEventListener(
       "error",
       (e) => {
-        setConnected(false);
+        setState("reconnecting");
         onError?.(e);
       },
       { signal: abort.signal }
@@ -81,7 +80,5 @@ export function useSSE({ onOpen, onMessage, onError, onClose }: Options = {}) {
 
   return {
     connect,
-    connecting,
-    connected,
   };
 }

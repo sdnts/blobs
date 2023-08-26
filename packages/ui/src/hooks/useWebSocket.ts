@@ -1,5 +1,6 @@
 import { Message, MessageCode, deserialize, serialize } from "@blobs/protocol";
 import { useEffect, useRef, useState } from "react";
+import { useSenderStore } from "../state";
 
 const WS_SCHEME = import.meta.env.PUBLIC_API_HOST.startsWith("localhost")
   ? "ws://"
@@ -19,6 +20,8 @@ export function useWebSocket({
   onError,
   onClose,
 }: Params = {}) {
+  const setState = useSenderStore((s) => s.setState);
+
   const messageBuffer = useRef<Message[]>([]);
   const websocket = useRef<WebSocket>();
   const [secret, setSecret] = useState<string>();
@@ -27,6 +30,7 @@ export function useWebSocket({
     let keepalive: NodeJS.Timer;
     const abort = new AbortController();
     const ws = new WebSocket(`${WS_SCHEME}${WS_HOST}/new`);
+    setState("connecting");
 
     ws.addEventListener(
       "open",
@@ -36,6 +40,7 @@ export function useWebSocket({
           10_000
         );
 
+        setState("waiting");
         onOpen?.(e);
 
         messageBuffer.current.forEach((m) => ws.send(serialize(m)));
@@ -58,8 +63,23 @@ export function useWebSocket({
       { signal: abort.signal }
     );
 
-    ws.addEventListener("error", (e) => onError?.(e), { signal: abort.signal });
-    ws.addEventListener("close", (e) => onClose?.(e), { signal: abort.signal });
+    ws.addEventListener(
+      "error",
+      (e) => {
+        setState("disconnected");
+        onError?.(e);
+      },
+      { signal: abort.signal }
+    );
+
+    ws.addEventListener(
+      "close",
+      (e) => {
+        setState("disconnected");
+        onClose?.(e);
+      },
+      { signal: abort.signal }
+    );
 
     websocket.current = ws;
     const cookies = Object.fromEntries(
