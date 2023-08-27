@@ -1,11 +1,11 @@
 import { Message, MessageCode } from "@blobs/protocol";
 import { CloudArrowUp } from "@phosphor-icons/react";
-import { Fragment, useCallback, useEffect, useRef, useState } from "react";
+import clsx from "clsx";
+import { animate } from "motion";
+import { Fragment, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { useWebSocket } from "../hooks/useWebSocket";
-import clsx from "clsx";
 import { formatSize, useSenderStore } from "../state";
-import { animate, spring } from "motion";
 
 export const Sender = () => {
   const state = useSenderStore((s) => s.state);

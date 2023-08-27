@@ -17,7 +17,6 @@ export const route = async (
   if (!ip) return errors.unknown("Missing IP");
 
   const cookie = request.headers.get("cookie");
-  console.log("Cookie", cookie);
 
   // First check to see if we can find an actorId in a cookie
   if (cookie) {
@@ -27,7 +26,6 @@ export const route = async (
         .filter((c) => !!c)
         .map((c) => c.trim().split("="))
     );
-    console.log("Cookies", cookies);
 
     if (cookies.auth) {
       const auth = await verify(cookies.auth, ctx);
