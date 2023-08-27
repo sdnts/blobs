@@ -19,6 +19,11 @@
         font-display: swap;
         src: url("/fonts/MerchantBOLDRound.ttf");
       }
+
+      /* Hides the outline added swup's A11y plugin  */
+      main:focus {
+        outline: none;
+      }
     </style>
   </head>
   <body
@@ -31,6 +36,22 @@
     ]}
   >
     <slot />
+
+    <!-- Page transitions -->
+    <script>
+      import Swup from "swup";
+      import SwupA11yPlugin from "@swup/a11y-plugin";
+      import SwupHeadPlugin from "@swup/head-plugin";
+      import SwupSlideTheme from "@swup/slide-theme";
+
+      const swup = new Swup({
+        plugins: [
+          new SwupA11yPlugin(),
+          new SwupHeadPlugin(),
+          new SwupSlideTheme({ mainElement: "main" }),
+        ],
+      });
+    </script>
 
     <!-- Analytics -->
     <script defer is:inline>
