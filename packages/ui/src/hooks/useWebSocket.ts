@@ -22,7 +22,10 @@ export function useWebSocket({
 }: Params = {}) {
   const setState = useSenderStore((s) => s.setState);
 
-  const messageBuffer = useRef<Message[]>([]);
+  const messageQueue = useSenderStore((s) => s.messageQueue);
+  const queueMessage = useSenderStore((s) => s.queueMessage);
+  const emptyMessageQueue = useSenderStore((s) => s.emptyMessageQueue);
+
   const websocket = useRef<WebSocket>();
 
   useEffect(() => {
@@ -44,8 +47,8 @@ export function useWebSocket({
           10_000
         );
 
-        messageBuffer.current.forEach((m) => ws.send(serialize(m)));
-        messageBuffer.current = [];
+        messageQueue.forEach((m) => ws.send(serialize(m)));
+        emptyMessageQueue();
       },
       { signal: abort.signal }
     );
@@ -98,7 +101,7 @@ export function useWebSocket({
         websocket.current.readyState === WebSocket.CONNECTING
       ) {
         console.log("Buffering message", message);
-        messageBuffer.current.push(message);
+        queueMessage(message);
         return;
       }
 

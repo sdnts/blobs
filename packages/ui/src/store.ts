@@ -22,9 +22,9 @@ type SenderStore = {
   addBlob: (b: File) => BlobMetadata;
   removeBlob: (idx: number) => void;
 
-  messageBuffer: Message[];
-  bufferMessage: (m: Message) => void;
-  emptyMessageBuffer: () => void;
+  messageQueue: Message[];
+  queueMessage: (m: Message) => void;
+  emptyMessageQueue: () => void;
 };
 
 export const useSenderStore = create<SenderStore>()((set) => ({
@@ -50,10 +50,10 @@ export const useSenderStore = create<SenderStore>()((set) => ({
   removeBlob: (idx: number) =>
     set((store) => ({ blobs: store.blobs.splice(idx, 1) })),
 
-  messageBuffer: [],
-  bufferMessage: (m: Message) =>
-    set((store) => ({ messageBuffer: store.messageBuffer.concat(m) })),
-  emptyMessageBuffer: () => set({ messageBuffer: [] }),
+  messageQueue: [],
+  queueMessage: (m: Message) =>
+    set((store) => ({ messageQueue: store.messageQueue.concat(m) })),
+  emptyMessageQueue: () => set({ messageQueue: [] }),
 }));
 
 type ReceiverStore = {
