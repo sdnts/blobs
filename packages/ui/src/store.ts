@@ -44,7 +44,7 @@ export const useSenderStore = create<SenderStore>()((set) => ({
       handle: b,
     };
 
-    set((store) => ({ blobs: store.blobs.concat(file) }));
+    set((store) => ({ blobs: [...store.blobs, file] }));
     return file;
   },
   removeBlob: (idx: number) =>

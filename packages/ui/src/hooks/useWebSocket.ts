@@ -28,11 +28,24 @@ export function useWebSocket({
 
   const websocket = useRef<WebSocket>();
 
+  // This useEffect manages the WebSocket
+  // It runs when the component mounts
   useEffect(() => {
-    let keepalive: NodeJS.Timer;
-    const abort = new AbortController();
     const ws = new WebSocket(`${WS_SCHEME}${WS_HOST}/new`);
     setState("connecting");
+
+    websocket.current = ws;
+    return () => ws.close();
+  }, []);
+
+  // This useEffect manages WebSocket event handlers.
+  // It runs every time state / callbacks change.
+  useEffect(() => {
+    const ws = websocket.current;
+    if (!ws) return () => {};
+
+    let keepalive: NodeJS.Timer;
+    const abort = new AbortController();
 
     ws.addEventListener(
       "open",
@@ -85,14 +98,11 @@ export function useWebSocket({
       { signal: abort.signal }
     );
 
-    websocket.current = ws;
-
     return () => {
       abort.abort();
       clearInterval(keepalive);
-      ws.close();
     };
-  }, []);
+  });
 
   return {
     send: (message: Message) => {

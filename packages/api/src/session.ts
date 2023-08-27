@@ -74,7 +74,7 @@ export class Session implements DurableObject {
 
   async alarm(): Promise<void> {
     const ctx = new Context(this.env, this.state.waitUntil);
-    ctx.setTags({ action: "nuke" });
+    ctx.setTags({ actorId: this.state.id.toString(), action: "nuke" });
 
     try {
       this.sender?.close();
@@ -191,8 +191,11 @@ export class Session implements DurableObject {
 
     const { searchParams } = new URL(request.url);
 
-    const id = searchParams.get("id");
-    if (!id) return errors.badRequest("Blob name is required");
+    const idString = searchParams.get("id");
+    if (!idString) return errors.badRequest("Blob ID is required");
+    const id = Number.parseInt(idString);
+    if (Number.isNaN(id))
+      return errors.badRequest(`Blob ID is malformed: ${idString}`);
 
     const metadata = await this.state.storage.get<BlobMetadata>(`blob:${id}`);
     if (!metadata) return errors.notFound("No such blob");
@@ -200,7 +203,7 @@ export class Session implements DurableObject {
     console.log("Downloading", JSON.stringify(metadata, null, 2));
 
     const readable = new ReadableStream<Uint8Array>(
-      new WebSocketSource(this.sender, ctx),
+      new WebSocketSource(this.sender, id),
       {
         highWaterMark: 10 * 1024 * 1024, // 10MiB
         size: (chunk) => chunk.byteLength,

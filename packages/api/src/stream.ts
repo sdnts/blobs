@@ -1,5 +1,4 @@
 import { MessageCode, deserialize, serialize } from "@blobs/protocol";
-import { Context } from "./context";
 
 /**
  * A ReadableByteStream source that reads remote files over a WebSocket connection.
@@ -35,18 +34,18 @@ export class WebSocketSource implements UnderlyingSource {
   /**
    * A handle to the WebSocket this source is reading from.
    */
+  #id: number;
   #ws: WebSocket;
-  #ctx: Context;
 
-  constructor(ws: WebSocket, ctx: Context) {
-    this.#ctx = ctx;
+  constructor(ws: WebSocket, id: number) {
+    this.#id = id;
 
-    this.#ctx.log("Constructing WebSocketSource");
+    console.log("Constructing WebSocketSource");
     this.#ws = ws;
   }
 
   pull(controller: ReadableStreamDefaultController): void | Promise<void> {
-    this.#ctx.log(`Pull ${controller.desiredSize}`);
+    console.log(`Pull ${controller.desiredSize}`);
 
     // Return early if the stream is full, has errored, or has closed
     // https://developer.mozilla.org/en-US/docs/Web/API/ReadableByteStreamController/desiredSize
@@ -64,18 +63,18 @@ export class WebSocketSource implements UnderlyingSource {
       this.#ws.addEventListener(
         "message",
         (e) => {
-          this.#ctx.log("Received message from sender");
+          console.log("Received message from sender");
           if (!(e.data instanceof ArrayBuffer)) return;
 
           const message = deserialize(e.data);
           if (message.err) return reject("Deserialization error");
           if (message.val.code === MessageCode.DataChunkEnd) {
-            this.#ctx.log("DataChunkEnd, resolving");
+            console.log("DataChunkEnd, resolving");
             return resolve();
           }
           if (message.val.code !== MessageCode.DataChunk) return;
           if (message.val.bytes.length === 0) {
-            this.#ctx.log("DataChunk 0 bytes, finished");
+            console.log("DataChunk 0 bytes, finished");
             controller.close();
             return resolve();
           }
@@ -86,8 +85,8 @@ export class WebSocketSource implements UnderlyingSource {
       );
 
       // Fill up the overflow buffer
-      this.#ctx.log("Requesting data");
-      this.#ws.send(serialize({ code: MessageCode.DataRequest, id: 0 }));
+      console.log("Requesting data");
+      this.#ws.send(serialize({ code: MessageCode.DataRequest, id: this.#id }));
     })
       .catch((e) => {
         console.error("WebSocketSource error", e);

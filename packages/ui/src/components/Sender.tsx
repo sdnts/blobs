@@ -2,7 +2,7 @@ import { Message, MessageCode } from "@blobs/protocol";
 import { CloudArrowUp } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { animate } from "motion";
-import { Fragment, useCallback, useEffect, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { formatSize, useSenderStore } from "../store";
@@ -13,6 +13,9 @@ export const Sender = () => {
 
   const secret = useSenderStore((s) => s.secret);
   const setSecret = useSenderStore((s) => s.setSecret);
+
+  const blobs = useSenderStore((store) => store.blobs);
+  const addBlob = useSenderStore((store) => store.addBlob);
 
   useEffect(() => {
     if (state === "ready") {
@@ -29,12 +32,9 @@ export const Sender = () => {
     }
   }, [state]);
 
-  const blobs = useSenderStore((store) => store.blobs);
-  const addBlob = useSenderStore((store) => store.addBlob);
-
-  const fileStreams = useRef<Array<ReadableStreamDefaultReader<Uint8Array>>>(
-    []
-  );
+  const fileStreams = useRef<
+    Record<number, ReadableStreamDefaultReader<Uint8Array>>
+  >({});
 
   const { open, getRootProps, getInputProps, isDragActive } = useDropzone({
     noClick: true,
@@ -42,26 +42,33 @@ export const Sender = () => {
     preventDropOnDocument: true,
     onDrop: (f) => {
       f.forEach((f) => {
-        const file = addBlob(f);
+        const blob = addBlob(f);
         wsSend({
           code: MessageCode.Metadata,
-          ...file,
+          id: blob.id,
+          name: blob.name,
+          size: blob.size,
+          type: blob.type,
         });
       });
     },
   });
 
-  const onMessage = useCallback(
-    async (message: Message) => {
+  const { send: wsSend } = useWebSocket({
+    onMessage: async (message: Message) => {
       switch (message.code) {
         case MessageCode.ReceiverJoined: {
           setState("ready");
 
+          console.log("Announcing");
           blobs.forEach((f) => {
             // Announce all uploaded files
             wsSend({
               code: MessageCode.Metadata,
-              ...f,
+              id: f.id,
+              name: f.name,
+              size: f.size,
+              type: f.type,
             });
           });
           break;
@@ -73,16 +80,21 @@ export const Sender = () => {
         }
 
         case MessageCode.DataRequest: {
-          console.log("Receiver requesting", message.id, blobs, fileStreams);
+          console.log(
+            "Receiver requesting",
+            message.id,
+            blobs,
+            fileStreams.current
+          );
 
           if (!fileStreams.current) return;
 
-          const file = blobs[message.id];
-          if (!file) return;
+          const blob = blobs.find((b) => b.id === message.id);
+          if (!blob) return;
 
           let stream = fileStreams.current[message.id];
           if (!stream) {
-            stream = fileStreams.current[message.id] = file.handle
+            stream = fileStreams.current[message.id] = blob.handle
               .stream()
               .pipeThrough<Uint8Array>(new CompressionStream("gzip"))
               .getReader();
@@ -130,10 +142,7 @@ export const Sender = () => {
         }
       }
     },
-    [blobs]
-  );
-
-  const { send: wsSend } = useWebSocket({ onMessage });
+  });
 
   return (
     <main className="flex-1 flex flex-col items-center" {...getRootProps()}>
