@@ -1,6 +1,6 @@
 import { MessageCode, type Message } from "@blobs/protocol";
 import { useRef } from "react";
-import { useReceiverStore } from "../state";
+import { useReceiverStore } from "../store";
 
 const ES_HOST = import.meta.env.PUBLIC_API_HOST;
 

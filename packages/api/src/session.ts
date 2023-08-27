@@ -1,4 +1,9 @@
-import { MessageCode, deserialize, serialize } from "@blobs/protocol";
+import {
+  BlobMetadata,
+  MessageCode,
+  deserialize,
+  serialize,
+} from "@blobs/protocol";
 import { customAlphabet } from "nanoid";
 import { Ok, Result } from "ts-results";
 import { Context } from "./context";
@@ -11,13 +16,6 @@ export const CONNECTION_TIMEOUT = 1 * 60 * 60; // 1h
 export const SESSION_TIMEOUT = 8 * 60 * 60; // 8h
 
 const nanoid = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 6);
-
-type BlobMetadata = {
-  id: number;
-  name: string;
-  size: number;
-  type: string;
-};
 
 export class Session implements DurableObject {
   private sender?: WebSocket;

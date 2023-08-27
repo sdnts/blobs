@@ -5,7 +5,7 @@ import { animate } from "motion";
 import { Fragment, useCallback, useEffect, useRef } from "react";
 import { useDropzone } from "react-dropzone";
 import { useWebSocket } from "../hooks/useWebSocket";
-import { formatSize, useSenderStore } from "../state";
+import { formatSize, useSenderStore } from "../store";
 
 export const Sender = () => {
   const state = useSenderStore((s) => s.state);
@@ -29,9 +29,8 @@ export const Sender = () => {
     }
   }, [state]);
 
-  const files = useSenderStore((store) => store.files);
-  const addFile = useSenderStore((store) => store.addFile);
-  const removeFile = useSenderStore((store) => store.removeFile);
+  const blobs = useSenderStore((store) => store.blobs);
+  const addBlob = useSenderStore((store) => store.addBlob);
 
   const fileStreams = useRef<Array<ReadableStreamDefaultReader<Uint8Array>>>(
     []
@@ -43,13 +42,10 @@ export const Sender = () => {
     preventDropOnDocument: true,
     onDrop: (f) => {
       f.forEach((f) => {
-        addFile(f);
+        const file = addBlob(f);
         wsSend({
           code: MessageCode.Metadata,
-          id: 0,
-          name: f.name,
-          size: f.size,
-          type: f.type || "application/octet-stream",
+          ...file,
         });
       });
     },
@@ -60,6 +56,14 @@ export const Sender = () => {
       switch (message.code) {
         case MessageCode.ReceiverJoined: {
           setState("ready");
+
+          blobs.forEach((f) => {
+            // Announce all uploaded files
+            wsSend({
+              code: MessageCode.Metadata,
+              ...f,
+            });
+          });
           break;
         }
 
@@ -69,16 +73,16 @@ export const Sender = () => {
         }
 
         case MessageCode.DataRequest: {
-          console.log("Receiver requesting", message.id, files, fileStreams);
+          console.log("Receiver requesting", message.id, blobs, fileStreams);
 
           if (!fileStreams.current) return;
 
-          const file = files[message.id];
+          const file = blobs[message.id];
           if (!file) return;
 
           let stream = fileStreams.current[message.id];
           if (!stream) {
-            stream = fileStreams.current[message.id] = file
+            stream = fileStreams.current[message.id] = file.handle
               .stream()
               .pipeThrough<Uint8Array>(new CompressionStream("gzip"))
               .getReader();
@@ -126,7 +130,7 @@ export const Sender = () => {
         }
       }
     },
-    [files]
+    [blobs]
   );
 
   const { send: wsSend } = useWebSocket({ onMessage });
@@ -147,9 +151,9 @@ export const Sender = () => {
       </section>
 
       <section id="files" className="flex flex-col items-center">
-        {files.length > 0 && (
+        {blobs.length > 0 && (
           <ul className={clsx("mt-24 text-2xl", "grid grid-cols-2 gap-4")}>
-            {files.map((f) => (
+            {blobs.map((f) => (
               <Fragment key={f.name}>
                 <li className="text-right">{f.name}</li>
                 <span className="text-gray">{formatSize(f.size)}</span>

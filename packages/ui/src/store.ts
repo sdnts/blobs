@@ -1,4 +1,4 @@
-import type { Message } from "@blobs/protocol";
+import type { BlobMetadata, Message } from "@blobs/protocol";
 import { create } from "zustand";
 
 type StreamState =
@@ -9,6 +9,8 @@ type StreamState =
   | "reconnecting"
   | "disconnected";
 
+let idCounter = 0;
+
 type SenderStore = {
   state: StreamState;
   setState: (s: StreamState) => void;
@@ -16,9 +18,9 @@ type SenderStore = {
   secret: string | null;
   setSecret: (s: string) => void;
 
-  files: File[];
-  addFile: (f: File) => void;
-  removeFile: (idx: number) => void;
+  blobs: Array<BlobMetadata & { handle: File }>;
+  addBlob: (b: File) => BlobMetadata;
+  removeBlob: (idx: number) => void;
 
   messageBuffer: Message[];
   bufferMessage: (m: Message) => void;
@@ -32,10 +34,21 @@ export const useSenderStore = create<SenderStore>()((set) => ({
   secret: null,
   setSecret: (s) => set({ secret: s }),
 
-  files: [],
-  addFile: (f: File) => set((store) => ({ files: store.files.concat(f) })),
-  removeFile: (idx: number) =>
-    set((store) => ({ files: store.files.splice(idx, 1) })),
+  blobs: [],
+  addBlob: (b: File) => {
+    const file = {
+      id: idCounter++,
+      name: b.name,
+      size: b.size,
+      type: b.type || "application/octet-stream",
+      handle: b,
+    };
+
+    set((store) => ({ blobs: store.blobs.concat(file) }));
+    return file;
+  },
+  removeBlob: (idx: number) =>
+    set((store) => ({ blobs: store.blobs.splice(idx, 1) })),
 
   messageBuffer: [],
   bufferMessage: (m: Message) =>
@@ -49,6 +62,9 @@ type ReceiverStore = {
 
   secret: string;
   setSecret: (s: string) => void;
+
+  blobs: BlobMetadata[];
+  addBlob: (b: BlobMetadata) => void;
 };
 
 export const useReceiverStore = create<ReceiverStore>()((set) => ({
@@ -57,6 +73,13 @@ export const useReceiverStore = create<ReceiverStore>()((set) => ({
 
   secret: "",
   setSecret: (s) => set({ secret: s }),
+
+  blobs: [],
+  addBlob: (blob: BlobMetadata) =>
+    set((store) => {
+      if (store.blobs.find((f) => f.id === blob.id)) return {}; // Dedupe
+      return { blobs: store.blobs.concat(blob) };
+    }),
 }));
 
 export const formatSize = (size: number): string => {

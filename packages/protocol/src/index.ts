@@ -2,6 +2,13 @@ import { pack } from "msgpackr/pack";
 import { unpack } from "msgpackr/unpack";
 import { Err, Ok, Result } from "ts-results";
 
+export type BlobMetadata = {
+  id: number;
+  name: string;
+  size: number;
+  type: string;
+};
+
 export enum MessageCode {
   SecretRequest = 1,
   Secret,

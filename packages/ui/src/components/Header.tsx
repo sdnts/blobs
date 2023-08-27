@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { timeline } from "motion";
 import { useEffect } from "react";
-import { useReceiverStore, useSenderStore } from "../state";
+import { useReceiverStore, useSenderStore } from "../store";
 
 type HeaderProps = {
   mode: "sender" | "receiver" | "static";

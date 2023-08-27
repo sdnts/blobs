@@ -1,25 +1,18 @@
-import { MessageCode } from "@blobs/protocol";
+import { BlobMetadata, MessageCode } from "@blobs/protocol";
 import clsx from "clsx";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { useSSE } from "../hooks/useSSE";
-import { formatSize, useReceiverStore } from "../state";
+import { formatSize, useReceiverStore } from "../store";
 import { animate, timeline } from "motion";
-
-type FileMetadata = {
-  id: number;
-  name: string;
-  size: number;
-  type: string;
-};
 
 export const Receiver = () => {
   const state = useReceiverStore((s) => s.state);
+  const blobs = useReceiverStore((s) => s.blobs);
+  const addBlob = useReceiverStore((s) => s.addBlob);
 
   const secretInput = useRef<HTMLInputElement>(null);
   const secret = useReceiverStore((s) => s.secret);
   const setSecret = useReceiverStore((s) => s.setSecret);
-
-  const [files, setFiles] = useState<FileMetadata[]>([]);
 
   const { connect } = useSSE({
     onOpen: () => {
@@ -38,8 +31,7 @@ export const Receiver = () => {
     },
     onMessage: (e) => {
       if (e.code !== MessageCode.Metadata) return;
-
-      setFiles((f) => [...f, e]);
+      addBlob(e);
     },
     onError: async () => {
       animate(secretInput.current!, { outlineColor: "#F52F2F" });
@@ -95,7 +87,7 @@ export const Receiver = () => {
         />
       </section>
 
-      {state === "ready" && files.length === 0 && (
+      {state === "ready" && blobs.length === 0 && (
         <>
           <span className="text-black text-2xl">Waiting for files</span>
           <span className="text-gray text-xl">Drop files on the other end</span>
@@ -104,9 +96,9 @@ export const Receiver = () => {
 
       {state === "ready" && (
         <section id="files" className="flex flex-col items-center">
-          {files.length > 0 && (
+          {blobs.length > 0 && (
             <ul className={clsx("mt-24 text-2xl", "grid grid-cols-2 gap-4")}>
-              {files.map((f) => (
+              {blobs.map((f) => (
                 <Fragment key={f.name}>
                   <li className="text-right">
                     <a

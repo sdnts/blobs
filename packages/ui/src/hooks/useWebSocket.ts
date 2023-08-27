@@ -1,6 +1,6 @@
 import { Message, MessageCode, deserialize, serialize } from "@blobs/protocol";
 import { useEffect, useRef } from "react";
-import { useSenderStore } from "../state";
+import { useSenderStore } from "../store";
 
 const WS_SCHEME = import.meta.env.PUBLIC_API_HOST.startsWith("localhost")
   ? "ws://"
