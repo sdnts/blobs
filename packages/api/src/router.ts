@@ -1,7 +1,7 @@
 import { customAlphabet } from "nanoid";
 import { Ok, Result } from "ts-results";
 import { Context } from "./context";
-import { decrypt } from "./cookie";
+import { verify } from "./cookie";
 import { BlobError, errors } from "./errors";
 
 const nanoid = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 6);
@@ -17,6 +17,7 @@ export const route = async (
   if (!ip) return errors.unknown("Missing IP");
 
   const cookie = request.headers.get("cookie");
+  console.log("Cookie", cookie);
 
   // First check to see if we can find an actorId in a cookie
   if (cookie) {
@@ -26,12 +27,13 @@ export const route = async (
         .filter((c) => !!c)
         .map((c) => c.trim().split("="))
     );
+    console.log("Cookies", cookies);
 
     if (cookies.auth) {
-      const auth = await decrypt(cookies.auth, ctx);
-      if (auth.err) return errors.unauthorized("Malformed auth cookie");
+      const auth = await verify(cookies.auth, ctx);
+      if (auth.err) return auth;
 
-      const [actorId, lockedIp] = auth.val.split(":");
+      const [actorId, lockedIp] = auth.val;
       if (!actorId || !lockedIp)
         return errors.internalError("Malformed auth cookie");
 

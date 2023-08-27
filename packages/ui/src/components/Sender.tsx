@@ -120,7 +120,8 @@ export const Sender = () => {
     [files]
   );
 
-  const { secret, send: wsSend } = useWebSocket({ onMessage });
+  const { send: wsSend } = useWebSocket({ onMessage });
+  const secret = useSenderStore((store) => store.secret);
 
   return (
     <main className="flex-1 flex flex-col items-center" {...getRootProps()}>

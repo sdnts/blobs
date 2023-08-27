@@ -1,5 +1,5 @@
 import { Message, MessageCode, deserialize, serialize } from "@blobs/protocol";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useSenderStore } from "../state";
 
 const WS_SCHEME = import.meta.env.PUBLIC_API_HOST.startsWith("localhost")
@@ -21,10 +21,10 @@ export function useWebSocket({
   onClose,
 }: Params = {}) {
   const setState = useSenderStore((s) => s.setState);
+  const setSecret = useSenderStore((s) => s.setSecret);
 
   const messageBuffer = useRef<Message[]>([]);
   const websocket = useRef<WebSocket>();
-  const [secret, setSecret] = useState<string>();
 
   useEffect(() => {
     let keepalive: NodeJS.Timer;
@@ -35,13 +35,19 @@ export function useWebSocket({
     ws.addEventListener(
       "open",
       (e) => {
+        setState("waiting");
+
+        const cookies = Object.fromEntries(
+          document.cookie.split(";").map((c) => c.trim().split("="))
+        );
+        setSecret(cookies.secret);
+
+        onOpen?.(e);
+
         keepalive = setInterval(
           () => ws.send(serialize({ code: MessageCode.Keepalive })),
           10_000
         );
-
-        setState("waiting");
-        onOpen?.(e);
 
         messageBuffer.current.forEach((m) => ws.send(serialize(m)));
         messageBuffer.current = [];
@@ -82,10 +88,6 @@ export function useWebSocket({
     );
 
     websocket.current = ws;
-    const cookies = Object.fromEntries(
-      document.cookie.split(";").map((c) => c.trim().split("="))
-    );
-    setSecret(cookies.secret);
 
     return () => {
       abort.abort();
@@ -95,7 +97,6 @@ export function useWebSocket({
   }, []);
 
   return {
-    secret,
     send: (message: Message) => {
       if (
         !websocket.current ||
