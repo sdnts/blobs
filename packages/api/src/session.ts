@@ -138,13 +138,7 @@ export class Session implements DurableObject {
       new Response(null, {
         status: 101,
         webSocket: sender[1],
-        headers: await appendCookies(
-          new Headers(),
-          this.state.id,
-          ip,
-          secret,
-          ctx
-        ),
+        headers: await appendCookies(new Headers(), this.state.id, ip, ctx),
       })
     );
   }
@@ -174,7 +168,6 @@ export class Session implements DurableObject {
     // Defer nuking by the session timeout
     this.state.storage.setAlarm(Date.now() + SESSION_TIMEOUT * 1000);
 
-    const headers = new Headers();
     return Ok(
       new Response(response.readable, {
         headers: await appendCookies(
@@ -184,7 +177,6 @@ export class Session implements DurableObject {
           }),
           this.state.id,
           ip,
-          secret,
           ctx
         ),
       })
