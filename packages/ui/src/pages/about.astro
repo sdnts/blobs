@@ -1,7 +1,26 @@
 ---
-import Layout from '../layouts/Layout.astro'
+import { Header } from "../components/Header";
+import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
-  
+  <!-- Deliberately skipping hydration for the header because it is static on this page -->
+  <Header mode="sender" />
+
+  <main class="flex flex-col gap-16">
+    <section>
+      <h2 title="About" class="text-6xl mb-2">Aout</h2>
+      <p class="text-xl text-gray">Why</p>
+    </section>
+
+    <section>
+      <h2 class="text-6xl mb-2">Tech</h2>
+      <p class="text-xl text-gray">How does it work?</p>
+    </section>
+
+    <section>
+      <h2 class="text-6xl mb-2">Privacy</h2>
+      <p class="text-xl text-gray">How do I handle abuse / snooping?</p>
+    </section>
+  </main>
 </Layout>
