@@ -3,7 +3,10 @@ import { unpack } from "msgpackr/unpack";
 import { Err, Ok, Result } from "ts-results";
 
 export enum MessageCode {
-  Joined = 1,
+  SecretRequest = 1,
+  Secret,
+
+  ReceiverJoined = 10,
   Metadata,
 
   DataRequest = 101,
@@ -14,7 +17,9 @@ export enum MessageCode {
 }
 
 export type Message =
-  | { code: MessageCode.Joined }
+  | { code: MessageCode.SecretRequest }
+  | { code: MessageCode.Secret; secret: string }
+  | { code: MessageCode.ReceiverJoined }
   | {
       code: MessageCode.Metadata;
       id: number;

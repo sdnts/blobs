@@ -20,15 +20,6 @@ export async function appendCookies(
     ].join("; ")
   );
 
-  headers.append(
-    "Set-Cookie",
-    [
-      `secret=${secret}`,
-      `Max-Age=${CONNECTION_TIMEOUT}`,
-      ctx.env.environment === "production" ? `Secure` : "",
-    ].join("; ")
-  );
-
   return headers;
 }
 

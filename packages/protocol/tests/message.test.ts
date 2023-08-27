@@ -3,7 +3,9 @@ import { Message, MessageCode, deserialize, serialize } from "../src";
 
 describe("Message", () => {
   test.each<[string, Message]>([
-    ["Joined", { code: MessageCode.Joined }],
+    ["SecretRequest", { code: MessageCode.SecretRequest }],
+    ["Secret", { code: MessageCode.Secret, secret: "696969" }],
+    ["ReceiverJoined", { code: MessageCode.ReceiverJoined }],
     [
       "Metadata",
       {

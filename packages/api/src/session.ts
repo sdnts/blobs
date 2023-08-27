@@ -114,6 +114,12 @@ export class Session implements DurableObject {
 
       const message = deserialize(e.data);
       if (message.err) return;
+
+      if (message.val.code === MessageCode.SecretRequest) {
+        this.sender?.send(serialize({ code: MessageCode.Secret, secret }));
+        return;
+      }
+
       if (message.val.code !== MessageCode.Metadata) return;
 
       const { id, name, size, type } = message.val;
@@ -158,7 +164,7 @@ export class Session implements DurableObject {
     const response = new IdentityTransformStream();
     this.receiver = response.writable.getWriter();
 
-    this.sender?.send(serialize({ code: MessageCode.Joined }));
+    this.sender?.send(serialize({ code: MessageCode.ReceiverJoined }));
 
     const { searchParams } = new URL(request.url);
     const secret = searchParams.get("s");

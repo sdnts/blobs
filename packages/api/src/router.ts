@@ -44,9 +44,10 @@ export const route = async (
   }
 
   const { pathname, searchParams } = new URL(request.url);
+  let [_, action] = pathname.split("/");
 
-  switch (pathname) {
-    case "/new": {
+  switch (action) {
+    case "new": {
       const upgrade = request.headers.get("Upgrade");
       if (!upgrade) return errors.badRequest("Missing Upgrade header");
       if (upgrade !== "websocket")
@@ -55,7 +56,7 @@ export const route = async (
       return Ok(ctx.env.sessions.newUniqueId());
     }
 
-    case "/join": {
+    case "join": {
       // We can now assume that this is the first time a client is connecting to
       // this session
       const secret = searchParams.get("s");
@@ -67,7 +68,7 @@ export const route = async (
       return Ok(ctx.env.sessions.idFromString(actorId));
     }
 
-    case "/download": {
+    case "download": {
       // Client must have a cookie to do this
       return errors.badRequest("No auth cookie");
     }

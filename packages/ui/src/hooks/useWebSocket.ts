@@ -21,7 +21,6 @@ export function useWebSocket({
   onClose,
 }: Params = {}) {
   const setState = useSenderStore((s) => s.setState);
-  const setSecret = useSenderStore((s) => s.setSecret);
 
   const messageBuffer = useRef<Message[]>([]);
   const websocket = useRef<WebSocket>();
@@ -35,14 +34,10 @@ export function useWebSocket({
     ws.addEventListener(
       "open",
       (e) => {
-        setState("waiting");
-
-        const cookies = Object.fromEntries(
-          document.cookie.split(";").map((c) => c.trim().split("="))
-        );
-        setSecret(cookies.secret);
-
         onOpen?.(e);
+
+        setState("waiting");
+        ws.send(serialize({ code: MessageCode.SecretRequest }));
 
         keepalive = setInterval(
           () => ws.send(serialize({ code: MessageCode.Keepalive })),

@@ -8,8 +8,12 @@ import { formatSize, useSenderStore } from "../state";
 import { animate, spring } from "motion";
 
 export const Sender = () => {
-  const state = useSenderStore((store) => store.state);
-  const setState = useSenderStore((store) => store.setState);
+  const state = useSenderStore((s) => s.state);
+  const setState = useSenderStore((s) => s.setState);
+
+  const secret = useSenderStore((s) => s.secret);
+  const setSecret = useSenderStore((s) => s.setSecret);
+
   useEffect(() => {
     if (state === "ready") {
       animate("#secret", { marginTop: "-3rem" }, { duration: 0.5 });
@@ -54,8 +58,13 @@ export const Sender = () => {
   const onMessage = useCallback(
     async (message: Message) => {
       switch (message.code) {
-        case MessageCode.Joined: {
+        case MessageCode.ReceiverJoined: {
           setState("ready");
+          break;
+        }
+
+        case MessageCode.Secret: {
+          setSecret(message.secret);
           break;
         }
 
@@ -121,7 +130,6 @@ export const Sender = () => {
   );
 
   const { send: wsSend } = useWebSocket({ onMessage });
-  const secret = useSenderStore((store) => store.secret);
 
   return (
     <main className="flex-1 flex flex-col items-center" {...getRootProps()}>
