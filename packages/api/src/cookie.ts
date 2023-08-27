@@ -7,7 +7,6 @@ export async function appendCookies(
   headers: Headers,
   actorId: DurableObjectId,
   ip: string,
-  secret: string,
   ctx: Context
 ): Promise<Headers> {
   headers.append(
@@ -52,8 +51,8 @@ export async function verify(
   cookie: string,
   ctx: Context
 ): Promise<Result<[string, string], BlobError>> {
-  const [actorId, ip, signature] = cookie.split("|");
-  const calculatedSignature = await sign(actorId, ip, ctx);
-  if (calculatedSignature === signature) return Ok([actorId, ip]);
+  const [actorId, ip] = cookie.split("|");
+  const signature = await sign(actorId, ip, ctx);
+  if (signature === cookie) return Ok([actorId, ip]);
   return errors.unauthorized("Incorrect auth cookie signature");
 }
