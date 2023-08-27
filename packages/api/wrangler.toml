@@ -4,7 +4,6 @@ compatibility_date = "2023-07-24"
 
 [vars]
 environment = 'production'
-allowedOrigins = ["https://blob.city"]
 
 [[kv_namespaces]]
 binding = "metadata"

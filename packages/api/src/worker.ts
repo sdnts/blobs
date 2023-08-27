@@ -4,7 +4,6 @@ import { route } from "./router";
 
 export type Env = {
   environment: "production" | "development";
-  allowedOrigins: string[];
   secret: string;
   metadata: KVNamespace;
   sessions: DurableObjectNamespace;
