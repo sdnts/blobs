@@ -9,7 +9,7 @@
     "check:types": "tsc"
   },
   "dependencies": {
-    "@astrojs/react": "3.0.0",
+    "@astrojs/react": "3.0.1",
     "@astrojs/tailwind": "5.0.0",
     "@blobs/protocol": "workspace:*",
     "@phosphor-icons/react": "2.0.10",
@@ -18,10 +18,10 @@
     "@swup/slide-theme": "2.0.0",
     "@types/react": "18.2.21",
     "@types/react-dom": "18.2.7",
-    "astro": "3.0.8",
+    "astro": "3.0.10",
     "clsx": "2.0.0",
     "motion": "10.16.2",
-    "partysocket": "0.0.2",
+    "partysocket": "0.0.3",
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "react-dropzone": "14.2.3",

@@ -1,122 +1,142 @@
-import { Message, MessageCode, deserialize, serialize } from "@blobs/protocol";
-import { useEffect, useRef } from "react";
-import { useSenderStore } from "../store";
+import type { BlobId, Message } from "@blobs/protocol";
+import { MessageCode, deserialize, serialize } from "@blobs/protocol";
+import { useWebSocket as usePartySocket } from "partysocket/react";
+import { useEffect, useMemo, useRef } from "react";
+import { useStore } from "../store";
 
-const WS_SCHEME = import.meta.env.PUBLIC_API_HOST.startsWith("localhost")
-  ? "ws://"
-  : "wss://";
+const WS_SCHEME = import.meta.env.DEV ? "ws://" : "wss://";
 const WS_HOST = import.meta.env.PUBLIC_API_HOST;
 
-type Params = {
-  onOpen?: (e: Event) => void;
-  onMessage?: (e: Message) => void;
-  onError?: (e: Event) => void;
-  onClose?: (e: CloseEvent) => void;
-};
+export function useWebSocket() {
+  const setState = useStore((s) => s.setState);
 
-export function useWebSocket({
-  onOpen,
-  onMessage,
-  onError,
-  onClose,
-}: Params = {}) {
-  const setState = useSenderStore((s) => s.setState);
+  const peerId = useStore((s) => s.peerId);
 
-  const messageQueue = useSenderStore((s) => s.messageQueue);
-  const queueMessage = useSenderStore((s) => s.queueMessage);
-  const emptyMessageQueue = useSenderStore((s) => s.emptyMessageQueue);
+  const uploads = useStore((s) => s.uploads);
+  const uploaded = useStore((store) => store.uploaded);
 
-  const websocket = useRef<WebSocket>();
+  const streams = useRef<
+    Record<BlobId["id"], ReadableStreamDefaultReader<Uint8Array>>
+  >({});
 
-  // This useEffect manages the WebSocket
-  // It runs when the component mounts
-  useEffect(() => {
-    const ws = new WebSocket(`${WS_SCHEME}${WS_HOST}/new`);
-    setState("connecting");
-
-    websocket.current = ws;
-    return () => ws.close();
+  const auth = useMemo(() => {
+    const a = sessionStorage.getItem("auth");
+    if (!a) location.pathname = "/";
+    return a!;
   }, []);
 
-  // This useEffect manages WebSocket event handlers.
-  // It runs every time state / callbacks change.
-  useEffect(() => {
-    const ws = websocket.current;
-    if (!ws) return () => {};
-
-    let keepalive: NodeJS.Timer;
-    const abort = new AbortController();
-
-    ws.addEventListener(
-      "open",
-      (e) => {
-        onOpen?.(e);
-
-        setState("waiting");
-        ws.send(serialize({ code: MessageCode.SecretRequest }));
-
-        keepalive = setInterval(
-          () => ws.send(serialize({ code: MessageCode.Keepalive })),
-          10_000
-        );
-
-        messageQueue.forEach((m) => ws.send(serialize(m)));
-        emptyMessageQueue();
-      },
-      { signal: abort.signal }
-    );
-
-    ws.addEventListener(
-      "message",
-      async (e) => {
+  const ws = usePartySocket(
+    `${WS_SCHEME}${WS_HOST}/tunnel?a=${encodeURIComponent(auth)}`,
+    undefined,
+    {
+      maxRetries: 10,
+      onOpen: () => setState("waiting"),
+      onClose: () => setState("disconnected"),
+      onError: () => setState("disconnected"),
+      onMessage: async (e) => {
         if (!(e.data instanceof Blob)) return;
 
         const data = await e.data.arrayBuffer();
         const message = deserialize(new Uint8Array(data));
         if (message.err) return;
 
-        onMessage?.(message.val);
+        switch (message.val.code) {
+          case MessageCode.PeerConnected:
+            return setState("ready");
+
+          case MessageCode.PeerDisconnected:
+            return setState("waiting");
+
+          case MessageCode.Metadata: {
+            if (message.val.id.owner === peerId) return;
+
+            console.log("Trigger download", message.val);
+            window.open(
+              `//${import.meta.env.PUBLIC_API_HOST
+              }/download?a=${encodeURIComponent(auth)}&o=${message.val.id.owner
+              }&i=${message.val.id.id}`,
+              "_blank"
+            );
+          }
+
+          case MessageCode.DataRequest: {
+            const { owner, id: blobId } = message.val.id;
+            if (owner !== peerId) return;
+
+            const blob = uploads.find((u) => u.id === blobId);
+            if (!blob) return;
+
+            let stream = streams.current[blobId];
+            if (!stream) {
+              stream = streams.current[blobId] = blob.handle
+                .stream()
+                .pipeThrough<Uint8Array>(new CompressionStream("gzip"))
+                .getReader();
+            }
+
+            // DO has a 1MiB incoming message limit, so we'll send 1MB at a time
+            // This allows us ample space for any extra bytes our serialization
+            // might add.
+            const CHUNK_SIZE = 100_000_000;
+
+            const { done, value } = await stream.read();
+            if (done) {
+              uploaded(blobId);
+              ws.send(
+                serialize({
+                  code: MessageCode.DataChunk,
+                  id: message.val.id,
+                  offset: 0,
+                  bytes: new Uint8Array(0),
+                })
+              );
+              ws.send(
+                serialize({
+                  code: MessageCode.DataChunkEnd,
+                  id: message.val.id,
+                })
+              );
+              return;
+            }
+
+            const parts = Math.ceil(value.byteLength / CHUNK_SIZE);
+            for (let p = 0; p < parts; p++) {
+              const offset = p * CHUNK_SIZE;
+              const bytes = value.slice(offset, offset + CHUNK_SIZE);
+              ws.send(
+                serialize({
+                  code: MessageCode.DataChunk,
+                  id: message.val.id,
+                  offset,
+                  bytes,
+                })
+              );
+            }
+
+            ws.send(
+              serialize({
+                code: MessageCode.DataChunkEnd,
+                id: message.val.id,
+              })
+            );
+          }
+        }
       },
-      { signal: abort.signal }
+    }
+  );
+
+  useEffect(() => {
+    if (!ws.OPEN) return;
+
+    const keepalive = setInterval(
+      () => ws.send(serialize({ code: MessageCode.Keepalive })),
+      10_000
     );
 
-    ws.addEventListener(
-      "error",
-      (e) => {
-        setState("disconnected");
-        onError?.(e);
-      },
-      { signal: abort.signal }
-    );
-
-    ws.addEventListener(
-      "close",
-      (e) => {
-        setState("disconnected");
-        onClose?.(e);
-      },
-      { signal: abort.signal }
-    );
-
-    return () => {
-      abort.abort();
-      clearInterval(keepalive);
-    };
-  });
+    return () => clearInterval(keepalive);
+  }, [ws.readyState]);
 
   return {
-    send: (message: Message) => {
-      if (
-        !websocket.current ||
-        websocket.current.readyState === WebSocket.CONNECTING
-      ) {
-        console.log("Buffering message", message);
-        queueMessage(message);
-        return;
-      }
-
-      console.log("Sending message", message);
-      websocket.current.send(serialize(message));
-    },
+    send: (message: Message) => ws.send(serialize(message)),
   };
 }

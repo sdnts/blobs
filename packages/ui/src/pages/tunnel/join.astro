@@ -1,0 +1,10 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { Header } from "../../components/Header";
+import { Join as Component } from "../../components/Join";
+---
+
+<Layout>
+  <Header client:idle mode="peer" />
+  <Component client:load />
+</Layout>

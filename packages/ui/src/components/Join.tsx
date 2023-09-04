@@ -1,63 +1,54 @@
-import { BlobMetadata, MessageCode } from "@blobs/protocol";
-import clsx from "clsx";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { useSSE } from "../hooks/useSSE";
-import { formatSize, useReceiverStore } from "../store";
+import { formatSize, useStore } from "../store";
+import clsx from "clsx";
 import { animate, timeline } from "motion";
 
-export const Receiver = () => {
-  const state = useReceiverStore((s) => s.state);
-  const blobs = useReceiverStore((s) => s.blobs);
-  const addBlob = useReceiverStore((s) => s.addBlob);
+export const Join = () => {
+  const state = useStore((s) => s.state);
+  const setState = useStore((s) => s.setState);
+  const blobs = useStore((s) => s.blobs);
 
+  const [secret, setSecret] = useState("");
   const secretInput = useRef<HTMLInputElement>(null);
-  const secret = useReceiverStore((s) => s.secret);
-  const setSecret = useReceiverStore((s) => s.setSecret);
-
-  const { connect } = useSSE({
-    onOpen: () => {
-      timeline([
-        ["#secret", { transform: "translateY(0)", opacity: 1 }],
-        [
-          "#secret",
-          {
-            transform: "translateY(-2rem)",
-            opacity: 0,
-            height: 0,
-            overflow: "hidden",
-          },
-        ],
-      ]);
-    },
-    onMessage: (e) => {
-      if (e.code !== MessageCode.Metadata) return;
-      addBlob(e);
-    },
-    onError: async () => {
-      animate(secretInput.current!, { outlineColor: "#F52F2F" });
-      await timeline(
-        [
-          [
-            secretInput.current!,
-            { transform: "translateX(-0.3rem)" },
-            { duration: 0.05 },
-          ],
-          [
-            secretInput.current!,
-            { transform: "translateX(0.3rem)" },
-            { duration: 0.05 },
-          ],
-        ],
-        { repeat: 2 }
-      ).finished;
-      secretInput.current?.focus();
-    },
-  });
 
   useEffect(() => {
-    if (secret.length !== 6) return;
+    if (secret === null || secret.length !== 6) return;
 
-    const disconnect = connect(secret);
+    fetch(
+      `http${import.meta.env.PROD ? "s" : ""}://${import.meta.env.PUBLIC_API_HOST
+      }/join?s=${secret}`,
+      { method: "PUT" }
+    )
+      .then((res) => {
+        if (res.status === 200) return res.json();
+        return Promise.reject();
+      })
+      .then((res: { auth: string }) => {
+        sessionStorage.setItem("auth", res.auth);
+        sessionStorage.setItem("peerId", "2");
+
+        setState("ready");
+        location.pathname = "/tunnel";
+      })
+      .catch(() => {
+        secretInput.current?.focus();
+        animate(secretInput.current!, { outlineColor: "#F52F2F" });
+        timeline(
+          [
+            [
+              secretInput.current!,
+              { transform: "translateX(-0.3rem)" },
+              { duration: 0.05 },
+            ],
+            [
+              secretInput.current!,
+              { transform: "translateX(0.3rem)" },
+              { duration: 0.05 },
+            ],
+          ],
+          { repeat: 2 }
+        );
+      });
   }, [secret]);
 
   return (
@@ -67,7 +58,7 @@ export const Receiver = () => {
         <input
           ref={secretInput}
           className={clsx(
-            "w-6/12",
+            "w-[9ch]",
             "px-4 pt-6 pb-2",
             "font-bold text-9xl text-center",
             "bg-lightGray rounded-md",
@@ -102,9 +93,8 @@ export const Receiver = () => {
                 <Fragment key={f.name}>
                   <li className="text-right">
                     <a
-                      href={`//${import.meta.env.PUBLIC_API_HOST}/download?id=${
-                        f.id
-                      }`}
+                      href={`//${import.meta.env.PUBLIC_API_HOST}/download?id=${f.id
+                        }`}
                     >
                       <span className="text-right">{f.name}</span>
                     </a>

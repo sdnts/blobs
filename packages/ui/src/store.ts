@@ -1,93 +1,53 @@
-import type { BlobMetadata, Message } from "@blobs/protocol";
+import type { BlobId } from "@blobs/protocol";
 import { create } from "zustand";
 
-type StreamState =
-  | "idle"
-  | "connecting"
-  | "waiting"
-  | "ready"
-  | "reconnecting"
-  | "disconnected";
+type TunnelState =
+  | "idle" // No WebSocket activity
+  | "connecting" // This peer is connecting
+  | "waiting" // Waiting on t.he other peer
+  | "ready" // Both peers are connected
+  | "reconnecting" // This peer is reconnecting
+  | "disconnected"; // This peer is disconnected
 
 let idCounter = 0;
 
-type SenderStore = {
-  state: StreamState;
-  setState: (s: StreamState) => void;
+type Upload = { id: BlobId["id"]; handle: File };
 
-  secret: string | null;
-  setSecret: (s: string) => void;
+type Store = {
+  peerId: string | null;
+  setPeerId: (i: string) => void;
 
-  blobs: Array<BlobMetadata & { handle: File }>;
-  addBlob: (b: File) => BlobMetadata;
-  removeBlob: (idx: number) => void;
+  state: TunnelState;
+  setState: (s: TunnelState) => void;
 
-  messageQueue: Message[];
-  queueMessage: (m: Message) => void;
-  emptyMessageQueue: () => void;
+  uploads: Upload[];
+  upload: (f: File) => Upload;
+  uploaded: (id: Upload["id"]) => void;
 };
 
-export const useSenderStore = create<SenderStore>()((set) => ({
+export const useStore = create<Store>()((set) => ({
+  peerId: null,
+  setPeerId: (peerId) => set({ peerId }),
+
   state: "idle",
-  setState: (s) => set({ state: s }),
+  setState: (state) => set({ state }),
 
-  secret: null,
-  setSecret: (s) => set({ secret: s }),
-
-  blobs: [],
-  addBlob: (b: File) => {
-    const file = {
-      id: idCounter++,
-      name: b.name,
-      size: b.size,
-      type: b.type || "application/octet-stream",
-      handle: b,
-    };
-
-    set((store) => ({ blobs: [...store.blobs, file] }));
-    return file;
+  uploads: [],
+  upload: (f) => {
+    const upload = { id: `${idCounter++}`, handle: f };
+    set((store) => ({ uploads: store.uploads.concat(upload) }));
+    return upload;
   },
-  removeBlob: (idx: number) =>
-    set((store) => ({ blobs: store.blobs.splice(idx, 1) })),
-
-  messageQueue: [],
-  queueMessage: (m: Message) =>
-    set((store) => ({ messageQueue: store.messageQueue.concat(m) })),
-  emptyMessageQueue: () => set({ messageQueue: [] }),
-}));
-
-type ReceiverStore = {
-  state: StreamState;
-  setState: (s: StreamState) => void;
-
-  secret: string;
-  setSecret: (s: string) => void;
-
-  blobs: BlobMetadata[];
-  addBlob: (b: BlobMetadata) => void;
-};
-
-export const useReceiverStore = create<ReceiverStore>()((set) => ({
-  state: "waiting",
-  setState: (s) => set({ state: s }),
-
-  secret: "",
-  setSecret: (s) => set({ secret: s }),
-
-  blobs: [],
-  addBlob: (blob: BlobMetadata) =>
-    set((store) => {
-      if (store.blobs.find((f) => f.id === blob.id)) return {}; // Dedupe
-      return { blobs: store.blobs.concat(blob) };
-    }),
+  uploaded: (id) =>
+    set((store) => ({ uploads: store.uploads.filter((u) => u.id !== id) })),
 }));
 
 export const formatSize = (size: number): string => {
   // The font I'm using does not have lowercase letters lol, so avoid confusion
   // and just use Mb instead of MiB
-  if (size < 1000) return `${size} B`;
-  if (size < 1_000_000) return `${(size / 1000).toFixed(2)} KB`;
-  if (size < 1_000_000_000) return `${(size / 1_000_1000).toFixed(2)} MB`;
+  if (size < 1_000) return `${size} B`;
+  if (size < 1_000_000) return `${(size / 1_000).toFixed(2)} KB`;
+  if (size < 1_000_000_000) return `${(size / 1_000_000).toFixed(2)} MB`;
   if (size < 1_000_000_000_000)
     return `${(size / 1_000_000_000).toFixed(2)} GB`;
   else return `${(size / 1_000_000_000_000).toFixed(2)} TB`;

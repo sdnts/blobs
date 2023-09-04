@@ -75,11 +75,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@astrojs/react@npm:3.0.0":
-  version: 3.0.0
-  resolution: "@astrojs/react@npm:3.0.0"
+"@astrojs/react@npm:3.0.1":
+  version: 3.0.1
+  resolution: "@astrojs/react@npm:3.0.1"
   dependencies:
-    "@astrojs/internal-helpers": 0.2.0
     "@vitejs/plugin-react": ^4.0.4
     ultrahtml: ^1.3.0
   peerDependencies:
@@ -87,7 +86,7 @@ __metadata:
     "@types/react-dom": ^17.0.17 || ^18.0.6
     react: ^17.0.2 || ^18.0.0
     react-dom: ^17.0.2 || ^18.0.0
-  checksum: ab838e30a2313fde6f28672e02980207c976f33cd7149ad74f8cca4c7442b5ce820751aebb77ab0a261ed63380124cde780e8b5b4968a06fba42680e23d7f49a
+  checksum: 6ae2a4bc8e5af3d06231635183b6c2813e35ef861c7ecb5f0a1347fc2d9d6c0cf691e198fbac611a3cdb6e20eb33d82853f60ea93d2188cbd1020926375f4d01
   languageName: node
   linkType: hard
 
@@ -1637,7 +1636,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@blobs/ui@workspace:packages/ui"
   dependencies:
-    "@astrojs/react": 3.0.0
+    "@astrojs/react": 3.0.1
     "@astrojs/tailwind": 5.0.0
     "@blobs/protocol": "workspace:*"
     "@phosphor-icons/react": 2.0.10
@@ -1646,10 +1645,10 @@ __metadata:
     "@swup/slide-theme": 2.0.0
     "@types/react": 18.2.21
     "@types/react-dom": 18.2.7
-    astro: 3.0.8
+    astro: 3.0.10
     clsx: 2.0.0
     motion: 10.16.2
-    partysocket: 0.0.2
+    partysocket: 0.0.3
     react: 18.2.0
     react-dom: 18.2.0
     react-dropzone: 14.2.3
@@ -3334,9 +3333,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"astro@npm:3.0.8":
-  version: 3.0.8
-  resolution: "astro@npm:3.0.8"
+"astro@npm:3.0.10":
+  version: 3.0.10
+  resolution: "astro@npm:3.0.10"
   dependencies:
     "@astrojs/compiler": ^2.0.1
     "@astrojs/internal-helpers": 0.2.0
@@ -3375,7 +3374,7 @@ __metadata:
     ora: ^7.0.1
     p-limit: ^4.0.0
     path-to-regexp: ^6.2.1
-    preferred-pm: ^3.0.3
+    preferred-pm: ^3.1.2
     prompts: ^2.4.2
     rehype: ^12.0.1
     resolve: ^1.22.4
@@ -3391,12 +3390,15 @@ __metadata:
     vfile: ^5.3.7
     vite: ^4.4.9
     vitefu: ^0.2.4
-    which-pm: ^2.0.0
+    which-pm: ^2.1.1
     yargs-parser: ^21.1.1
     zod: 3.21.1
+  dependenciesMeta:
+    sharp:
+      optional: true
   bin:
     astro: astro.js
-  checksum: 9bc1130cdf695eaaa028af4b56333bbec0788fda9ffe947439407de9f8b0c755fa965f48ddb4ced42d4f0d997976168e6208cf019b1cd579673756a6ebca0e05
+  checksum: 078b7f06f661080eb27b2c27fb58b5efee11ab89b1019f77e35b17bff8be3b857db41f27dbe5ffe62b15481852467d4ea2bc3240b6bdd093728093f4977bcccb
   languageName: node
   linkType: hard
 
@@ -8089,12 +8091,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"partysocket@npm:0.0.2":
-  version: 0.0.2
-  resolution: "partysocket@npm:0.0.2"
+"partysocket@npm:0.0.3":
+  version: 0.0.3
+  resolution: "partysocket@npm:0.0.3"
   dependencies:
     react: ^18.2.0
-  checksum: d915e9cf6e1bb1a5669ebe111dd0a05ea856f93c73da547603015fe1063f8a2c1af0e09184b977c3cbb88b63ca6498cae2244db0592438d165a52e5c554a06e4
+  checksum: 9caddeb5d2c938b684686715b6356ecdd9a27efbc42e60d10df0c794cf35e8dd76c39324b1f1f82f472e7d62ac032e830de941e8e19b2b4ebe33dc47bc4f50cd
   languageName: node
   linkType: hard
 
@@ -8743,7 +8745,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"preferred-pm@npm:^3.0.3":
+"preferred-pm@npm:^3.1.2":
   version: 3.1.2
   resolution: "preferred-pm@npm:3.1.2"
   dependencies:
@@ -11112,7 +11114,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"which-pm@npm:^2.0.0":
+"which-pm@npm:^2.1.1":
   version: 2.1.1
   resolution: "which-pm@npm:2.1.1"
   dependencies:

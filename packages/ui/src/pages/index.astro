@@ -9,6 +9,59 @@ import Layout from "../layouts/Layout.astro";
   <Header mode="static" />
 
   <main class="flex justify-center">
-    <HeroText client:load />
+    <section class:list={["leading-none", "text-[32vmin] md:text-[18vmin]"]}>
+      <div>
+        <HeroText title="Airdrop">AIRDOP</HeroText>
+        <HeroText title="for">FR</HeroText>
+      </div>
+
+      <div class="flex justify-between items-end">
+        <div>
+          <HeroText title="the">THE</HeroText>
+          <HeroText title="Web">WE</HeroText>
+        </div>
+
+        <section
+          class:list={["flex flex-col gap-6", "mb-[2rem]", "font-normal"]}
+        >
+          <a
+            href="/tunnel/new"
+            class:list={[
+              "bg-black text-white",
+              "px-6 py-3",
+              "rounded-lg",
+              "text-2xl md:text-4xl lg:text-3xl text-center",
+            ]}
+          >
+            Send
+          </a>
+          <a
+            href="/tunnel/join"
+            class:list={[
+              "text-black border-2 border-black",
+              "px-6 py-3",
+              "rounded-lg",
+              "text-2xl md:text-4xl lg:text-3xl text-center",
+            ]}
+          >
+            Receive
+          </a>
+        </section>
+      </div>
+    </section>
   </main>
+
+  <script>
+    import { animate, stagger, spring } from "motion";
+
+    animate(
+      ".hero-text",
+      { transform: "translateY(0)" },
+      {
+        duration: 0.6,
+        delay: stagger(0.05),
+        easing: spring({ velocity: 100, mass: 10 }),
+      }
+    );
+  </script>
 </Layout>

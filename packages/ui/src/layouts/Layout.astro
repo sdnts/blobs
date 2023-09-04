@@ -1,30 +1,44 @@
-<html lang="en">
+---
+import { ViewTransitions } from "astro:transitions";
+---
+
+<html lang="en" transition:animate="fade">
   <head>
     <meta charset="utf-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />
     <title>﹒ Blob City ﹒</title>
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link
+      rel="preload"
+      href="/fonts/MerchantREGRound.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/fonts/MerchantBOLDRound.ttf"
+      as="font"
+      type="font/ttf"
+      crossorigin
+    />
 
     <style>
       @font-face {
         font-family: "Merchant";
         font-weight: 400;
-        font-display: swap;
         src: url("/fonts/MerchantREGRound.ttf");
       }
       @font-face {
         font-family: "Merchant";
         font-weight: 700;
-        font-display: swap;
         src: url("/fonts/MerchantBOLDRound.ttf");
       }
-
-      /* Hides the outline added swup's A11y plugin  */
-      main:focus {
-        outline: none;
-      }
     </style>
+
+    <ViewTransitions />
   </head>
   <body
     class:list={[
@@ -37,35 +51,17 @@
   >
     <slot />
 
-    <!-- Page transitions -->
-    <script>
-      import Swup from "swup";
-      import SwupA11yPlugin from "@swup/a11y-plugin";
-      import SwupHeadPlugin from "@swup/head-plugin";
-      import SwupSlideTheme from "@swup/slide-theme";
-
-      const swup = new Swup({
-        plugins: [
-          new SwupA11yPlugin(),
-          new SwupHeadPlugin(),
-          new SwupSlideTheme({ mainElement: "main" }),
-        ],
-      });
-    </script>
-
     <!-- Analytics -->
     <script defer is:inline>
-      (() => {
-        if (window.location.hostname === "localhost") return;
-
-        fetch("https://in.sdnts.dev/m", {
+      if (window.location.hostname !== "localhost") {
+        fetch("https://in.sdnts.dev/a", {
           method: "POST",
           body: JSON.stringify({
             name: "page_view",
             path: window.location.pathname,
           }),
         });
-      })();
+      }
     </script>
   </body>
 </html>
