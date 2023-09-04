@@ -12,9 +12,11 @@
     "test": "vitest",
     "build": "tsup src/index.ts --clean --dts --format esm,cjs"
   },
-  "devDependencies": {
+  "dependencies": {
     "msgpackr": "1.9.7",
-    "ts-results": "3.3.0",
+    "ts-results": "3.3.0"
+  },
+  "devDependencies": {
     "tsup": "7.2.0",
     "typescript": "5.2.2",
     "vitest": "0.34.3"

@@ -8,7 +8,7 @@
     "deploy": "wrangler deploy",
     "check:types": "tsc"
   },
-  "devDependencies": {
+  "dependencies": {
     "@blobs/protocol": "workspace:*",
     "@cloudflare/workers-types": "4.20230821.0",
     "nanoid": "4.0.2",
