@@ -1,4 +1,4 @@
-import { MessageCode, deserialize, serialize } from "@blobs/protocol";
+import { BlobId, MessageCode, deserialize, serialize } from "@blobs/protocol";
 
 /**
  * A ReadableByteStream source that reads remote files over a WebSocket connection.
@@ -34,13 +34,11 @@ export class WebSocketSource implements UnderlyingSource {
   /**
    * A handle to the WebSocket this source is reading from.
    */
-  #id: number;
+  #id: BlobId;
   #ws: WebSocket;
 
-  constructor(ws: WebSocket, id: number) {
+  constructor(ws: WebSocket, id: BlobId) {
     this.#id = id;
-
-    console.log("Constructing WebSocketSource");
     this.#ws = ws;
   }
 
@@ -97,7 +95,7 @@ export class WebSocketSource implements UnderlyingSource {
       });
   }
 
-  cancel(reason: any): void {
+  cancel(): void {
     this.#ws.close();
   }
 }

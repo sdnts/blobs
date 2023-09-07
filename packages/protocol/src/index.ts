@@ -2,19 +2,20 @@ import { pack } from "msgpackr/pack";
 import { unpack } from "msgpackr/unpack";
 import { Err, Ok, Result } from "ts-results";
 
+export type PeerId = string;
+export type BlobId = { owner: PeerId; id: string };
 export type BlobMetadata = {
-  id: number;
-  name: string;
-  size: number;
-  type: string;
+  id: BlobId;
+  name: string; // File name of the blob
+  size: number; // Size of the blob
+  type: string; // MIME type of the blob
 };
 
 export enum MessageCode {
-  SecretRequest = 1,
-  Secret,
+  PeerConnected = 1,
+  PeerDisconnected,
 
-  ReceiverJoined = 10,
-  Metadata,
+  Metadata = 11,
 
   DataRequest = 101,
   DataChunk,
@@ -24,27 +25,23 @@ export enum MessageCode {
 }
 
 export type Message =
-  | { code: MessageCode.SecretRequest }
-  | { code: MessageCode.Secret; secret: string }
-  | { code: MessageCode.ReceiverJoined }
+  | { code: MessageCode.PeerConnected }
+  | { code: MessageCode.PeerDisconnected }
+  | ({ code: MessageCode.Metadata } & BlobMetadata)
   | {
-      code: MessageCode.Metadata;
-      id: number;
-      name: string;
-      size: number;
-      type: string;
-    }
-  | { code: MessageCode.DataRequest; id: number }
+    code: MessageCode.DataRequest; // Announces that a blob is being requested to download
+    id: BlobId;
+  }
   | {
-      code: MessageCode.DataChunk;
-      id: number;
-      offset: number;
-      bytes: Uint8Array;
-    }
+    code: MessageCode.DataChunk; // Indicates a single chunk of a blob
+    id: BlobId;
+    offset: number; // Byte-offset of this blob chunk
+    bytes: Uint8Array; // Raw chunk bytes
+  }
   | {
-      code: MessageCode.DataChunkEnd;
-      id: number;
-    }
+    code: MessageCode.DataChunkEnd; // Marks the blob's chunk boundary
+    id: BlobId;
+  }
   | { code: MessageCode.Keepalive };
 
 export function serialize(message: Message): Uint8Array {

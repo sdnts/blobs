@@ -6,12 +6,12 @@ compatibility_date = "2023-07-24"
 environment = 'production'
 
 [[kv_namespaces]]
-binding = "metadata"
+binding = "tunnels"
 id = "9c05b646c17b4bc19b1ba41e9bf55cc0"
 preview_id = "9c05b646c17b4bc19b1ba41e9bf55cc0"
 
 [durable_objects]
-bindings = [{ name = "sessions", class_name = "Session" }]
+bindings = [{ name = "tunnel", class_name = "Tunnel" }]
 [[migrations]]
 tag = "v0"
-new_classes = ["Session"]
+new_classes = ["Tunnel"]

@@ -3,14 +3,13 @@ import { Message, MessageCode, deserialize, serialize } from "../src";
 
 describe("Message", () => {
   test.each<[string, Message]>([
-    ["SecretRequest", { code: MessageCode.SecretRequest }],
-    ["Secret", { code: MessageCode.Secret, secret: "696969" }],
-    ["ReceiverJoined", { code: MessageCode.ReceiverJoined }],
+    ["PeerConnected", { code: MessageCode.PeerConnected }],
+    ["PeerDisconnected", { code: MessageCode.PeerDisconnected }],
     [
       "Metadata",
       {
         code: MessageCode.Metadata,
-        id: 1,
+        id: { owner: "9999", id: "1" },
         name: "signature",
         size: 24,
         type: "text/plain",
@@ -20,7 +19,7 @@ describe("Message", () => {
       "Metadata",
       {
         code: MessageCode.Metadata,
-        id: 2,
+        id: { owner: "9999", id: "1" },
         name: "name:with:colons",
         size: 10,
         type: "application/json",
@@ -30,18 +29,24 @@ describe("Message", () => {
       "Metadata",
       {
         code: MessageCode.Metadata,
-        id: 3,
+        id: { owner: "9999", id: "1" },
         name: "Spider.Man.Across.The.Spiderverse.mov",
         size: 500 * 1024 * 1024, // 500 MiB
         type: "video/mov",
       },
     ],
-    ["DataRequest", { code: MessageCode.DataRequest, id: 1 }],
+    [
+      "DataRequest",
+      {
+        code: MessageCode.DataRequest,
+        id: { owner: "9999", id: "1" },
+      },
+    ],
     [
       "DataChunk",
       {
         code: MessageCode.DataChunk,
-        id: 2,
+        id: { owner: "9999", id: "1" },
         offset: 0,
         bytes: new Uint8Array([1, 2, 3, 4]),
       },
@@ -50,7 +55,7 @@ describe("Message", () => {
       "DataChunk",
       {
         code: MessageCode.DataChunk,
-        id: 3,
+        id: { owner: "9999", id: "1" },
         offset: 128,
         bytes: new Uint8Array(65536),
       },
@@ -59,7 +64,7 @@ describe("Message", () => {
       "DataChunkEnd",
       {
         code: MessageCode.DataChunkEnd,
-        id: 3,
+        id: { owner: "9999", id: "1" },
       },
     ],
     ["Keepalive", { code: MessageCode.Keepalive }],

@@ -13,7 +13,7 @@
     "build": "tsup src/index.ts --clean --dts --format esm,cjs"
   },
   "dependencies": {
-    "msgpackr": "1.9.7",
+    "msgpackr": "1.9.8",
     "ts-results": "3.3.0"
   },
   "devDependencies": {
