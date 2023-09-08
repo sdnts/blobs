@@ -50,14 +50,28 @@ import Layout from "../layouts/Layout.astro";
   <script>
     import { animate, stagger, spring } from "motion";
 
-    animate(
-      ".hero-text",
-      { transform: "translateY(0)" },
-      {
-        duration: 0.6,
-        delay: stagger(0.05),
-        easing: spring({ velocity: 100, mass: 10 }),
-      }
+    const motionMediaQuery = window.matchMedia(
+      "(prefers-reduced-motion: no-preference)"
     );
+
+    const animateIn = () => {
+      if (!motionMediaQuery.matches) return;
+
+      const text = document.querySelectorAll(".hero-text");
+      if (text.length === 0) return;
+
+      animate(
+        text,
+        { transform: "translateY(0)" },
+        {
+          duration: 0.6,
+          delay: stagger(0.05),
+          easing: spring({ velocity: 100, mass: 10 }),
+        }
+      );
+    };
+
+    animateIn();
+    document.addEventListener("astro:after-swap", animateIn);
   </script>
 </Layout>
