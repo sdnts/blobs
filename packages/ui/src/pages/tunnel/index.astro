@@ -1,10 +1,10 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { Header } from "../../components/Header";
+import { Status } from "../../components/Status";
 import { Tunnel } from "../../components/Tunnel";
 ---
 
 <Layout>
-  <Header client:idle mode="peer" />
+  <Status slot="status" client:idle />
   <Tunnel client:only="react" />
 </Layout>

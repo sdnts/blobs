@@ -1,12 +1,8 @@
 ---
-import { Header } from "../components/Header";
 import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
-  <!-- Deliberately skipping hydration for the header because it is static on this page -->
-  <Header mode="static" />
-
   <main class="flex flex-col gap-16">
     <section>
       <h2 title="About" class="text-6xl mb-2">Aout</h2>

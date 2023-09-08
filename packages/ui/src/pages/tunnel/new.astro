@@ -1,10 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
-import { Header } from "../../components/Header";
 import { New as Component } from "../../components/New";
 ---
 
 <Layout>
-  <Header client:idle mode="peer" />
   <Component client:load />
 </Layout>

@@ -1,13 +1,9 @@
 ---
-import { Header } from "../components/Header";
 import { HeroText } from "../components/HeroText";
 import Layout from "../layouts/Layout.astro";
 ---
 
 <Layout>
-  <!-- Deliberately skipping hydration for the header because it is static on this page -->
-  <Header mode="static" />
-
   <main class="flex justify-center">
     <section class:list={["leading-none", "text-[32vmin] md:text-[18vmin]"]}>
       <div>
