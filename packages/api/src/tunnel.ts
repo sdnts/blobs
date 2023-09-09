@@ -1,4 +1,5 @@
 import {
+  BlobId,
   BlobMetadata,
   MessageCode,
   deserialize,
@@ -11,6 +12,8 @@ import { WebSocketSource } from "./stream";
 import { Env } from "./worker";
 
 export class Tunnel implements DurableObject {
+  private downloads: Array<{ id: BlobId; stream: WebSocketSource }> = [];
+
   constructor(
     private state: DurableObjectState,
     private env: Env
@@ -47,14 +50,39 @@ export class Tunnel implements DurableObject {
     const message = deserialize(data);
     if (message.err) return;
 
-    if (message.val.code !== MessageCode.Metadata) return;
+    if (message.val.code === MessageCode.Metadata) {
+      await this.state.storage.put<BlobMetadata>(
+        `blob:${message.val.id.owner}:${message.val.id.id}`,
+        message.val
+      );
 
-    await this.state.storage.put<BlobMetadata>(
-      `blob:${message.val.id.owner}:${message.val.id.id}`,
-      message.val
+      return this.state
+        .getWebSockets()
+        .forEach((ws) => ws.send(serialize(message.val)));
+    }
+
+    if (
+      message.val.code !== MessageCode.DataChunk &&
+      message.val.code !== MessageCode.DataChunkEnd
+    ) {
+      return;
+    }
+
+    const blobId = message.val.id;
+    const downloadIdx = this.downloads.findIndex(
+      (d) => d.id.owner === blobId.owner && d.id.id === blobId.id
     );
+    if (downloadIdx === -1) return;
 
-    this.state.getWebSockets().forEach((ws) => ws.send(serialize(message.val)));
+    this.downloads[downloadIdx].stream.webSocketMessage(message.val);
+
+    if (
+      message.val.code === MessageCode.DataChunk &&
+      message.val.bytes.byteLength === 0
+    ) {
+      // This download has finished, get rid of it
+      this.downloads.splice(downloadIdx, 1);
+    }
   }
 
   webSocketClose() {
@@ -69,16 +97,18 @@ export class Tunnel implements DurableObject {
     if (!upgrade) return error(400, "Missing Upgrade header");
     if (upgrade !== "websocket") return error(400, "Invalid Upgrade header");
 
-    const peers = this.state.getWebSockets();
+    const peerId = request.query.p;
+    if (!peerId) return error(400, "peerId is required");
+    if (Array.isArray(peerId)) return error(400, "Multiple peerIds");
 
-    const peerId = `${peers.length}`;
     const peer = new WebSocketPair();
-
-    this.state
-      .getWebSockets()
-      .forEach((ws) => ws.send(serialize({ code: MessageCode.PeerConnected })));
+    const peers = this.state.getWebSockets();
+    peers.forEach((ws) =>
+      ws.send(serialize({ code: MessageCode.PeerConnected }))
+    );
 
     this.state.acceptWebSocket(peer[0], [peerId]);
+
     return new Response(null, { status: 101, webSocket: peer[1] });
   };
 
@@ -99,29 +129,32 @@ export class Tunnel implements DurableObject {
     );
     if (!metadata) return error(404, "No such blob");
 
-    ctx.tag({ blobId: metadata.id.id, peerId: metadata.id.owner });
+    ctx.tag({ blobId: metadata.id.id, owner });
 
-    const source = this.state.getWebSockets(metadata.id.owner);
+    const source = this.state.getWebSockets(owner);
     if (!source) return error(500, "Unknown peer in metadata");
+    if (source.length > 1) return error(500, "Too many sources");
 
-    const blob = new ReadableStream<Uint8Array>(
-      new WebSocketSource(source[0], metadata.id),
+    const stream = new WebSocketSource(source[0], metadata.id);
+    const blob = new ReadableStream<Uint8Array>(stream, {
+      highWaterMark: 50 * 1024 * 1024, // 50MiB, essentially how many bytes we'll buffer in memory
+      size: (chunk) => chunk.byteLength,
+    });
+
+    this.downloads.push({ id: { owner, id }, stream });
+
+    return new Response(
+      blob.pipeThrough(new FixedLengthStream(metadata.size)),
       {
-        highWaterMark: 10 * 1024 * 1024, // 10MiB
-        size: (chunk) => chunk.byteLength,
+        status: 200,
+        encodeBody: "manual",
+        headers: {
+          Connection: "close",
+          "Content-Type": metadata.type,
+          "Content-Disposition": `attachment; filename=\"${metadata.name}\"`,
+          "Content-Encoding": "gzip",
+        },
       }
     );
-
-    return new Response(blob, {
-      status: 200,
-      encodeBody: "manual",
-      headers: {
-        Connection: "close",
-        "Content-Length": `${metadata.size}`,
-        "Content-Type": metadata.type,
-        "Content-Disposition": `attachment; filename=\"${metadata.name}\"`,
-        "Content-Encoding": "gzip",
-      },
-    });
   };
 }
