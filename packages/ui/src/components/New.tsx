@@ -1,8 +1,10 @@
 import clsx from "clsx";
-import { useEffect } from "react";
+import { toast } from "sonner";
+import { ErrorToast } from "./Toasts";
 
 export const New = () => {
-  useEffect(() => {
+  const createTunnel = () => {
+    const t = toast.loading("Creating tunnel", { duration: 5000 });
     sessionStorage.clear();
 
     fetch(
@@ -11,32 +13,41 @@ export const New = () => {
       { method: "PUT" }
     )
       .then((res) => res.json())
-      .then((res: { secret: string; auth: string }) => {
-        if (!res.secret || !res.auth) throw new Error("Malformed API response");
+      .then((res: { secret: string; token: string }) => {
+        if (!res.secret || !res.token)
+          throw new Error("Malformed API response");
 
-        // I'd have liked to use a session cookie for this stuff, but I really
-        // want tab-level storage: stuff that is unique to a tab, and that gets
-        // pruned when it is closed.
+        toast.success("Ready", { id: t, duration: 5000 });
+
+        // I'd have liked to use a session cookie for auth, but I really want
+        // tab-level storage: stuff that is unique to a tab, that gets pruned
+        // when it is closed.
         sessionStorage.setItem("secret", res.secret);
-        sessionStorage.setItem("auth", res.auth);
+        sessionStorage.setItem("token", res.token);
         sessionStorage.setItem("peerId", "1");
         location.pathname = "/tunnel";
-      });
-  }, []);
+      })
+      .catch((e) =>
+        toast.error(
+          <ErrorToast>
+            Unable to create a tunnel, please try again in a bit!
+          </ErrorToast>,
+          { id: t, duration: 10_000, description: e.message }
+        )
+      );
+  };
 
   return (
-    <main className="flex-1 flex flex-col items-center">
-      <section className={clsx("flex flex-col items-center gap-4", "mt-36")}>
-        <span className="text-gray text-2xl tracking-normal">
-          Use this secret to receive
-        </span>
-        <span
-          id="secret"
-          className="block animate-pulse text-9xl tracking-widest w-[9ch] bg-gray"
-        >
-          ------
-        </span>
-      </section>
-    </main>
+    <button
+      className={clsx(
+        "bg-black text-white",
+        "px-6 py-3",
+        "rounded-lg",
+        "text-2xl md:text-4xl lg:text-3xl text-center"
+      )}
+      onClick={createTunnel}
+    >
+      Send
+    </button>
   );
 };

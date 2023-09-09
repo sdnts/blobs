@@ -1,11 +1,12 @@
 ---
-import { HeroText } from "../components/HeroText";
 import Layout from "../layouts/Layout.astro";
+import { HeroText } from "../components/HeroText";
+import { New } from "../components/New";
 ---
 
 <Layout>
   <main class="flex justify-center">
-    <section class:list={["leading-none", "text-[32vmin] md:text-[18vmin]"]}>
+    <section class:list={["leading-none", "text-[24vmin] md:text-[18vmin]"]}>
       <div>
         <HeroText title="Airdrop">AIRDOP</HeroText>
         <HeroText title="for">FR</HeroText>
@@ -20,17 +21,7 @@ import Layout from "../layouts/Layout.astro";
         <section
           class:list={["flex flex-col gap-6", "mb-[2rem]", "font-normal"]}
         >
-          <a
-            href="/tunnel/new"
-            class:list={[
-              "bg-black text-white",
-              "px-6 py-3",
-              "rounded-lg",
-              "text-2xl md:text-4xl lg:text-3xl text-center",
-            ]}
-          >
-            Send
-          </a>
+          <New client:load />
           <a
             href="/tunnel/join"
             class:list={[
