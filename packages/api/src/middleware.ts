@@ -14,13 +14,13 @@ export type TunnelRequest = IRequestStrict & {
 
 export const withIp =
   (): Middleware =>
-    (request, ctx): void | Response => {
-      let ip = request.headers.get("cf-connecting-ip");
-      if (ctx.env.environment === "development") ip = "127.0.0.1";
-      if (!ip) return error(400, "Missing IP");
+  (request, ctx): void | Response => {
+    let ip = request.headers.get("cf-connecting-ip");
+    if (ctx.env.environment === "development") ip = "127.0.0.1";
+    if (!ip) return error(400, "Missing IP");
 
-      request.ip = ip;
-    };
+    request.ip = ip;
+  };
 
 export const withTags = (): Middleware => (request, ctx) => {
   ctx.tag({
@@ -50,9 +50,9 @@ export const withAuth = (): Middleware => async (request, ctx) => {
 type Action = "preflight" | "new" | "join" | "tunnel" | "download";
 export const withAction =
   (action: Action): Middleware =>
-    (_, ctx) => {
-      ctx.tag({ action });
-    };
+  (_, ctx) => {
+    ctx.tag({ action });
+  };
 
 export const withTunnel = (): Middleware => (request, ctx) => {
   const tunnel = ctx.env.tunnel.get(

@@ -49,7 +49,8 @@ export function useWebSocket(peerId: string, token: string) {
             params.set("o", message.val.id.owner);
             params.set("i", message.val.id.id);
             window.open(
-              `//${import.meta.env.PUBLIC_API_HOST
+              `//${
+                import.meta.env.PUBLIC_API_HOST
               }/download?${params.toString()}`,
               "_blank"
             );

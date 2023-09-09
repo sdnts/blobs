@@ -8,7 +8,8 @@ export const New = () => {
     sessionStorage.clear();
 
     fetch(
-      `http${import.meta.env.PROD ? "s" : ""}://${import.meta.env.PUBLIC_API_HOST
+      `http${import.meta.env.PROD ? "s" : ""}://${
+        import.meta.env.PUBLIC_API_HOST
       }/new`,
       { method: "PUT" }
     )

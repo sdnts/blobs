@@ -17,7 +17,7 @@ export class Tunnel implements DurableObject {
   constructor(
     private state: DurableObjectState,
     private env: Env
-  ) { }
+  ) {}
 
   async fetch(request: Request): Promise<Response> {
     const ctx = new Context(this.env, this.state.waitUntil);

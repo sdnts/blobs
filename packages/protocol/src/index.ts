@@ -29,19 +29,19 @@ export type Message =
   | { code: MessageCode.PeerDisconnected }
   | ({ code: MessageCode.Metadata } & BlobMetadata)
   | {
-    code: MessageCode.DataRequest; // Announces that a blob is being requested to download
-    id: BlobId;
-  }
+      code: MessageCode.DataRequest; // Announces that a blob is being requested to download
+      id: BlobId;
+    }
   | {
-    code: MessageCode.DataChunk; // Indicates a single chunk of a blob
-    id: BlobId;
-    offset: number; // Byte-offset of this blob chunk
-    bytes: Uint8Array; // Raw chunk bytes
-  }
+      code: MessageCode.DataChunk; // Indicates a single chunk of a blob
+      id: BlobId;
+      offset: number; // Byte-offset of this blob chunk
+      bytes: Uint8Array; // Raw chunk bytes
+    }
   | {
-    code: MessageCode.DataChunkEnd; // Marks the blob's chunk boundary
-    id: BlobId;
-  }
+      code: MessageCode.DataChunkEnd; // Marks the blob's chunk boundary
+      id: BlobId;
+    }
   | { code: MessageCode.Keepalive };
 
 export function serialize(message: Message): Uint8Array {
