@@ -31,14 +31,14 @@ export const withTags = (): Middleware => (request, ctx) => {
 };
 
 export const withAuth = (): Middleware => async (request, ctx) => {
-  const auth = request.query["a"];
-  if (!auth) return error(403, "Missing auth");
-  if (Array.isArray(auth)) return error(400, "Multiple tokens");
+  const token = request.query.t;
+  if (!token) return error(403, "Missing auth");
+  if (Array.isArray(token)) return error(400, "Multiple tokens");
 
-  const token = await verify(auth, ctx);
-  if (token === false) return error(403, "Invalid auth token");
+  const auth = await verify(token, ctx);
+  if (auth === false) return error(403, "Invalid auth token");
 
-  const [tunnelId, lockedIp] = token;
+  const [tunnelId, lockedIp] = auth;
   if (!tunnelId || !lockedIp) return error(400, "Malformed auth token");
 
   request.tunnelId = tunnelId;

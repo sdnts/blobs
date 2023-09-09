@@ -1,5 +1,6 @@
 ---
 import { ViewTransitions } from "astro:transitions";
+import { Toaster } from "sonner";
 ---
 
 <html lang="en" transition:animate="fade">
@@ -24,6 +25,18 @@ import { ViewTransitions } from "astro:transitions";
       type="font/ttf"
       crossorigin
     />
+
+    <!--
+      This... works but isn't ideal. Using Astro's client-side router strips
+      Sonner's styles, even if the transition:persist is set. This means toasts
+      show up, but in the wrong place / without styles. Manually adding these
+      stlyes back fixes things. I got this stylesheet directly from Sonner's
+      codebase (https://github.com/emilkowalski/sonner/blob/main/src/styles.css),
+      since it does not ship with the module.
+      I'm pretty sure what I'm seeing is the same as this reported issue on Astro:
+      https://github.com/withastro/astro/issues/8114, but we'll see.
+    -->
+    <link rel="stylesheet" href="/sonner.css" />
 
     <style>
       @font-face {
@@ -86,6 +99,17 @@ import { ViewTransitions } from "astro:transitions";
     </header>
 
     <slot />
+
+    <Toaster
+      client:load
+      transition:persist
+      transition:name="sonner"
+      toastOptions={{ className: "bg-white" }}
+      closeButton
+      theme="light"
+      richColors
+      duration={5000}
+    />
 
     <!-- Analytics -->
     <script defer>
