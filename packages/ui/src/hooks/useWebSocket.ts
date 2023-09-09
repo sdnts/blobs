@@ -1,38 +1,31 @@
 import type { BlobId, Message } from "@blobs/protocol";
 import { MessageCode, deserialize, serialize } from "@blobs/protocol";
 import { useWebSocket as usePartySocket } from "partysocket/react";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useStore } from "../store";
 
 const WS_SCHEME = import.meta.env.DEV ? "ws://" : "wss://";
 const WS_HOST = import.meta.env.PUBLIC_API_HOST;
 
-export function useWebSocket() {
-  const setState = useStore((s) => s.setState);
-
-  const peerId = useStore((s) => s.peerId);
-
-  const uploads = useStore((s) => s.uploads);
-  const uploaded = useStore((store) => store.uploaded);
+export function useWebSocket(peerId: string, token: string) {
+  const [setState, uploads, uploaded] = useStore((s) => [
+    s.setState,
+    s.uploads,
+    s.uploaded,
+  ]);
 
   const streams = useRef<
     Record<BlobId["id"], ReadableStreamDefaultReader<Uint8Array>>
   >({});
 
-  const auth = useMemo(() => {
-    const a = sessionStorage.getItem("auth");
-    if (!a) location.pathname = "/";
-    return a!;
-  }, []);
-
   const ws = usePartySocket(
-    `${WS_SCHEME}${WS_HOST}/tunnel?a=${encodeURIComponent(auth)}`,
+    `${WS_SCHEME}${WS_HOST}/tunnel?t=${encodeURIComponent(token)}&p=${peerId}`,
     undefined,
     {
       maxRetries: 10,
       onOpen: () => setState("waiting"),
       onClose: () => setState("disconnected"),
-      onError: () => setState("disconnected"),
+      onError: () => setState("fatal"),
       onMessage: async (e) => {
         if (!(e.data instanceof Blob)) return;
 
@@ -51,10 +44,13 @@ export function useWebSocket() {
             if (message.val.id.owner === peerId) return;
 
             console.log("Trigger download", message.val);
+            const params = new URLSearchParams();
+            params.set("t", token);
+            params.set("o", message.val.id.owner);
+            params.set("i", message.val.id.id);
             window.open(
               `//${import.meta.env.PUBLIC_API_HOST
-              }/download?a=${encodeURIComponent(auth)}&o=${message.val.id.owner
-              }&i=${message.val.id.id}`,
+              }/download?${params.toString()}`,
               "_blank"
             );
           }

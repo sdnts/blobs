@@ -1,22 +1,22 @@
 import type { BlobId } from "@blobs/protocol";
-import { create } from "zustand";
+import { toast } from "sonner";
+import { shallow } from "zustand/shallow";
+import { createWithEqualityFn } from "zustand/traditional";
 
 type TunnelState =
   | "idle" // No WebSocket activity
   | "connecting" // This peer is connecting
-  | "waiting" // Waiting on t.he other peer
+  | "waiting" // Waiting on the other peer
   | "ready" // Both peers are connected
   | "reconnecting" // This peer is reconnecting
-  | "disconnected"; // This peer is disconnected
+  | "disconnected" // This peer is disconnected
+  | "fatal"; // This peer encountered an unrecoverable error
 
 let idCounter = 0;
 
 type Upload = { id: BlobId["id"]; handle: File };
 
 type Store = {
-  peerId: string | null;
-  setPeerId: (i: string) => void;
-
   state: TunnelState;
   setState: (s: TunnelState) => void;
 
@@ -25,22 +25,28 @@ type Store = {
   uploaded: (id: Upload["id"]) => void;
 };
 
-export const useStore = create<Store>()((set) => ({
-  peerId: null,
-  setPeerId: (peerId) => set({ peerId }),
+export const useStore = createWithEqualityFn<Store>()(
+  (set) => ({
+    state: "idle",
+    setState: (state) => {
+      set({ state });
 
-  state: "idle",
-  setState: (state) => set({ state }),
+      if (state === "ready") toast.success("Ready");
+      if (state === "waiting") toast("Join now");
+      if (state === "disconnected") toast.error("Disconnected, reconnecting");
+    },
 
-  uploads: [],
-  upload: (f) => {
-    const upload = { id: `${idCounter++}`, handle: f };
-    set((store) => ({ uploads: store.uploads.concat(upload) }));
-    return upload;
-  },
-  uploaded: (id) =>
-    set((store) => ({ uploads: store.uploads.filter((u) => u.id !== id) })),
-}));
+    uploads: [],
+    upload: (f) => {
+      const upload = { id: `${idCounter++}`, handle: f };
+      set((store) => ({ uploads: store.uploads.concat(upload) }));
+      return upload;
+    },
+    uploaded: (id) =>
+      set((store) => ({ uploads: store.uploads.filter((u) => u.id !== id) })),
+  }),
+  shallow
+);
 
 export const formatSize = (size: number): string => {
   // The font I'm using does not have lowercase letters lol, so avoid confusion

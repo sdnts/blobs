@@ -1,28 +1,58 @@
 import { MessageCode } from "@blobs/protocol";
 import { CloudArrowUp } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { Fragment, useEffect, useMemo } from "react";
+import { Fragment, Suspense } from "react";
 import { useDropzone } from "react-dropzone";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { formatSize, useStore } from "../store";
+import { ErrorBoundary } from "./ErrorBoundary";
+import { suspend } from "suspend-react";
+import { toast } from "sonner";
 
 export const Tunnel = () => {
-  const peerId = useStore((s) => s.peerId);
-  const setPeerId = useStore((s) => s.setPeerId);
+  return (
+    <ErrorBoundary>
+      <Suspense fallback={<Fragment />}>
+        <Peer />
+      </Suspense>
+    </ErrorBoundary>
+  );
+};
 
-  const state = useStore((s) => s.state);
+type Session = {
+  peerId: string;
+  token: string;
+  secret?: string;
+};
 
-  const uploads = useStore((store) => store.uploads);
-  const upload = useStore((store) => store.upload);
+const Peer = () => {
+  const [state, uploads, upload] = useStore((s) => [
+    s.state,
+    s.uploads,
+    s.upload,
+  ]);
 
-  const secret = useMemo(() => sessionStorage.getItem("secret"), []);
-  useEffect(() => {
-    const id = sessionStorage.getItem("peerId");
-    if (!id) location.pathname = "/";
-    setPeerId(id!);
-  }, []);
+  const session = suspend(
+    () =>
+      new Promise<Session>((resolve, reject) => {
+        const peerId = sessionStorage.getItem("peerId");
+        const token = sessionStorage.getItem("token");
+        const secret = sessionStorage.getItem("secret") ?? undefined;
 
-  const ws = useWebSocket();
+        if (!peerId || !token) {
+          toast.error("An unrecoverable error has occurred", {
+            duration: 20_000,
+          });
+          if (!peerId) return reject("Missing peerId in session");
+          if (!token) return reject("Missing token in session");
+        }
+
+        return resolve({ peerId, token, secret });
+      }),
+    []
+  );
+
+  const ws = useWebSocket(session.peerId, session.token);
 
   const { open, getRootProps, getInputProps, isDragActive } = useDropzone({
     noClick: true,
@@ -33,7 +63,7 @@ export const Tunnel = () => {
         const uploadId = upload(f);
         ws.send({
           code: MessageCode.Metadata,
-          id: { owner: peerId!, id: uploadId.id },
+          id: { owner: session.peerId, id: uploadId.id },
           name: f.name,
           size: f.size,
           type: f.type || "application/octet-stream",
@@ -55,7 +85,7 @@ export const Tunnel = () => {
               Use this secret to receive
             </span>
             <span id="secret" className="font-bold text-9xl tracking-widest">
-              {secret}
+              {session.secret}
             </span>
           </>
         )}

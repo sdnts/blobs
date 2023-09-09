@@ -46,7 +46,7 @@ export default {
         return new Response(
           JSON.stringify({
             secret,
-            auth: await sign(tunnelId, request.ip, ctx),
+            token: await sign(tunnelId, request.ip, ctx),
           }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
@@ -62,7 +62,9 @@ export default {
         await ctx.env.tunnels.delete(secret);
 
         return new Response(
-          JSON.stringify({ auth: await sign(tunnelId, request.ip, ctx) }),
+          JSON.stringify({
+            token: await sign(tunnelId, request.ip, ctx),
+          }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
       })
@@ -83,6 +85,7 @@ export default {
         return response;
       })
       .catch((e) => {
+        ctx.tag({ status: "500" });
         ctx.error(`Uncaught error: ${(e as Error).message}`);
         return error(500, `Uncaught error: ${(e as Error).message}`);
       })
