@@ -28,5 +28,8 @@
         }
       }
     ]
+  },
+  "resolutions": {
+    "astro@3.0.10": "patch:astro@npm%3A3.0.10#./.yarn/patches/astro-npm-3.0.10-86d723c83d.patch"
   }
 }

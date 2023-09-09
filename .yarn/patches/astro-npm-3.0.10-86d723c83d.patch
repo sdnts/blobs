@@ -1,0 +1,35 @@
+diff --git a/dist/cli/telemetry/index.js b/dist/cli/telemetry/index.js
+index 9312ea436499322a182c91aa13e59351eb88d31c..44c66a60ef2dcb58ea6ac01ac55e7f33ce83970d 100644
+--- a/dist/cli/telemetry/index.js
++++ b/dist/cli/telemetry/index.js
+@@ -2,7 +2,7 @@ import whichPm from "which-pm";
+ import * as msg from "../../core/messages.js";
+ import { telemetry } from "../../events/index.js";
+ async function notify() {
+-  const packageManager = (await whichPm(process.cwd())).name ?? "npm";
++  const packageManager = "yarn";
+   await telemetry.notify(() => {
+     console.log(msg.telemetryNotice(packageManager) + "\n");
+     return true;
+@@ -18,9 +18,9 @@ async function update(subcommand, { flags }) {
+         Commands: [
+           ["enable", "Enable anonymous data collection."],
+           ["disable", "Disable anonymous data collection."],
+-          ["reset", "Reset anonymous data collection settings."]
+-        ]
+-      }
++          ["reset", "Reset anonymous data collection settings."],
++        ],
++      },
+     });
+     return;
+   }
+@@ -42,7 +42,4 @@ async function update(subcommand, { flags }) {
+     }
+   }
+ }
+-export {
+-  notify,
+-  update
+-};
++export { notify, update };

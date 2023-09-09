@@ -3404,6 +3404,75 @@ __metadata:
   languageName: node
   linkType: hard
 
+"astro@patch:astro@npm%3A3.0.10#./.yarn/patches/astro-npm-3.0.10-86d723c83d.patch::locator=root-workspace-0b6124%40workspace%3A.":
+  version: 3.0.10
+  resolution: "astro@patch:astro@npm%3A3.0.10#./.yarn/patches/astro-npm-3.0.10-86d723c83d.patch::version=3.0.10&hash=5ddfdf&locator=root-workspace-0b6124%40workspace%3A."
+  dependencies:
+    "@astrojs/compiler": ^2.0.1
+    "@astrojs/internal-helpers": 0.2.0
+    "@astrojs/markdown-remark": 3.0.0
+    "@astrojs/telemetry": 3.0.1
+    "@babel/core": ^7.22.10
+    "@babel/generator": ^7.22.10
+    "@babel/parser": ^7.22.10
+    "@babel/plugin-transform-react-jsx": ^7.22.5
+    "@babel/traverse": ^7.22.10
+    "@babel/types": ^7.22.10
+    "@types/babel__core": ^7.20.1
+    acorn: ^8.10.0
+    boxen: ^7.1.1
+    chokidar: ^3.5.3
+    ci-info: ^3.8.0
+    clsx: ^2.0.0
+    common-ancestor-path: ^1.0.1
+    cookie: ^0.5.0
+    debug: ^4.3.4
+    devalue: ^4.3.2
+    diff: ^5.1.0
+    es-module-lexer: ^1.3.0
+    esbuild: ^0.19.2
+    estree-walker: ^3.0.3
+    execa: ^8.0.1
+    fast-glob: ^3.3.1
+    github-slugger: ^2.0.0
+    gray-matter: ^4.0.3
+    html-escaper: ^3.0.3
+    http-cache-semantics: ^4.1.1
+    js-yaml: ^4.1.0
+    kleur: ^4.1.4
+    magic-string: ^0.30.3
+    mime: ^3.0.0
+    ora: ^7.0.1
+    p-limit: ^4.0.0
+    path-to-regexp: ^6.2.1
+    preferred-pm: ^3.1.2
+    prompts: ^2.4.2
+    rehype: ^12.0.1
+    resolve: ^1.22.4
+    semver: ^7.5.4
+    server-destroy: ^1.0.1
+    sharp: ^0.32.5
+    shiki: ^0.14.3
+    string-width: ^6.1.0
+    strip-ansi: ^7.1.0
+    tsconfig-resolver: ^3.0.1
+    undici: ^5.23.0
+    unist-util-visit: ^4.1.2
+    vfile: ^5.3.7
+    vite: ^4.4.9
+    vitefu: ^0.2.4
+    which-pm: ^2.1.1
+    yargs-parser: ^21.1.1
+    zod: 3.21.1
+  dependenciesMeta:
+    sharp:
+      optional: true
+  bin:
+    astro: astro.js
+  checksum: 97657fd1b2988cefff2333ab3f8825a0a4f2964314925df888d66fb15d43b375497c214a79504070a130bd0c1b508ea0cc574b8705dd666048ed7b3000aae710
+  languageName: node
+  linkType: hard
+
 "async@npm:^3.2.3":
   version: 3.2.4
   resolution: "async@npm:3.2.4"
