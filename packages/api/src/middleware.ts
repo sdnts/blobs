@@ -35,10 +35,10 @@ export const withAuth = (): Middleware => async (request, ctx) => {
   if (!token) return error(403, "Missing auth");
   if (Array.isArray(token)) return error(400, "Multiple tokens");
 
-  const auth = await verify(token, ctx);
+  const auth = await verify(token, ctx.env);
   if (auth === false) return error(403, "Invalid auth token");
 
-  const [tunnelId, lockedIp] = auth;
+  const { tunnelId, ip: lockedIp } = auth;
   if (!tunnelId || !lockedIp) return error(400, "Malformed auth token");
 
   request.tunnelId = tunnelId;

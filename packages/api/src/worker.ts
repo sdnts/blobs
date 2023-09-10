@@ -46,7 +46,7 @@ export default {
         return new Response(
           JSON.stringify({
             secret,
-            token: await sign(tunnelId, request.ip, ctx),
+            token: await sign(tunnelId, request.ip, ctx.env),
           }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
@@ -63,7 +63,7 @@ export default {
 
         return new Response(
           JSON.stringify({
-            token: await sign(tunnelId, request.ip, ctx),
+            token: await sign(tunnelId, request.ip, ctx.env),
           }),
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
