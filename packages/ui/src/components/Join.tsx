@@ -88,7 +88,7 @@ export const Join = () => {
           onChange={(e) =>
             !e.currentTarget.validity.patternMismatch &&
             !e.currentTarget.validity.tooLong &&
-            setSecret(e.currentTarget.value)
+            setSecret(e.currentTarget.value.toUpperCase())
           }
         />
       </section>
