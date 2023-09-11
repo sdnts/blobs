@@ -6,8 +6,8 @@
   ],
   "scripts": {
     "api": "yarn workspace @blobs/api",
-    "ui": "yarn workspace @blobs/ui",
     "protocol": "yarn workspace @blobs/protocol",
+    "ui": "yarn workspace @blobs/ui",
     "format": "prettier -w . --ignore-path .gitignore",
     "check:format": "prettier -c . --ignore-path .gitignore"
   },
