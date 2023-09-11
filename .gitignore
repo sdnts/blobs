@@ -12,9 +12,11 @@ yarn-error.log*
 
 node_modules/
 
+.wrangler/
+packages/api/.dev.vars
+
 dist/
 .astro/
-.wrangler/
 test-results/
 playwright-report/
 playwright/.cache/

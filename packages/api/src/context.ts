@@ -1,7 +1,7 @@
 import { Env } from "./worker";
 
 export type LogLevel = "trace" | "debug" | "info" | "warn" | "error" | "fatal";
-export type Tags = Record<string, string | undefined>;
+export type Tags = Record<string, string | number>;
 
 type DropFirst<T extends unknown[]> = T extends [any, ...infer U] ? U : never;
 
@@ -12,10 +12,7 @@ export class Context {
 
   constructor(env: Env, waitUntil: ExecutionContext["waitUntil"]) {
     this.env = env;
-    this.waitUntil = async (promise) => {
-      if (env.environment === "development") await promise;
-      else waitUntil(promise);
-    };
+    this.waitUntil = waitUntil;
   }
 
   public tag(tags: Tags) {
@@ -53,32 +50,40 @@ export class Context {
   }
 
   public async ship(): Promise<void> {
-    if (this.env.environment === "development") {
-      console.log("Shipping metrics", JSON.stringify(this.tags));
-      return;
-    }
-
     if (!this.env.metricsClientId || !this.env.metricsClientSecret) return;
 
     // Ship metrics to Sinope via the ingest-worker
     // https://github.com/sdnts/ingest-worker
-    this.waitUntil(
-      fetch("https://in.sdnts.dev/m", {
-        method: "POST",
-        headers: {
-          Origin: "https://api.blob.city",
-          "CF-Access-Client-Id": this.env.metricsClientId,
-          "CF-Access-Client-Secret": this.env.metricsClientSecret,
-        },
-        body: JSON.stringify({
-          name: "request",
-          rayId: this.tags.rayId,
-          method: this.tags.method,
-          path: this.tags.path,
-          status: this.tags.status,
-        }),
-      })
+
+    const tags = {
+      method: this.tags.method,
+      path: this.tags.path,
+      status: this.tags.status,
+    };
+    const fields = Object.fromEntries(
+      Object.entries(this.tags).filter(
+        ([k]) => k !== "method" && k !== "path" && k !== "status"
+      )
     );
+
+    const shipment = fetch("https://in.sdnts.dev/m", {
+      method: "POST",
+      headers: {
+        Origin: "https://api.blob.city",
+        "CF-Access-Client-Id": this.env.metricsClientId,
+        "CF-Access-Client-Secret": this.env.metricsClientSecret,
+      },
+      body: JSON.stringify({ name: "request", ...tags, fields }),
+    }).then(async (r) => console.log(r.status, await r.text()));
+
+    if (this.env.environment === "development") {
+      console.log("Shipping metrics", JSON.stringify({ tags, fields }));
+
+      // waitUntil seems to be broken in development
+      await shipment;
+    } else {
+      this.waitUntil(shipment);
+    }
 
     // TODO: Ship logs to Sinope
   }

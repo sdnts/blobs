@@ -67,7 +67,7 @@ export default {
       .all("*", () => error(400, "Bad pathname"))
       .handle(request, ctx)
       .then((r: Response) => {
-        ctx.tag({ status: String(r.status) });
+        ctx.tag({ status: r.status });
 
         const response = new Response(r.body, r);
         response.headers.set(

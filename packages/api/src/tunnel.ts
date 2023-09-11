@@ -28,7 +28,7 @@ export class Tunnel implements DurableObject {
       .all("*", withTags("unknown"), () => error(500, "Bad pathname"))
       .handle(request, ctx)
       .then((response) => {
-        ctx.tag({ status: String(response.status) });
+        ctx.tag({ status: response.status });
         return response;
       })
       .catch((e) => {
