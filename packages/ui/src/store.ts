@@ -32,7 +32,6 @@ export const useStore = createWithEqualityFn<Store>()(
       set({ state });
 
       if (state === "ready") toast.success("Ready");
-      if (state === "waiting") toast("Join now");
       if (state === "disconnected") toast.error("Disconnected, reconnecting");
     },
 
@@ -57,4 +56,14 @@ export const formatSize = (size: number): string => {
   if (size < 1_000_000_000_000)
     return `${(size / 1_000_000_000).toFixed(2)} GB`;
   else return `${(size / 1_000_000_000_000).toFixed(2)} TB`;
+};
+
+export const navigate = (path: `/${string}`) => {
+  // Setting the `location` directly does not trigger the Astro client-side
+  // router, which means we get a harsh transition, but more importantly, we
+  // lose all our toasts.
+  const a = document.createElement("a");
+  a.href = path;
+  document.body.appendChild(a);
+  a.click();
 };

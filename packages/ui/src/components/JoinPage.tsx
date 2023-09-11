@@ -2,19 +2,22 @@ import clsx from "clsx";
 import { animate, timeline } from "motion";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useStore } from "../store";
-import { ErrorToast } from "./Toasts";
+import { navigate, useStore } from "../store";
 
-export const Join = () => {
-  const [state, setState] = useStore((s) => [s.state, s.setState]);
+export const JoinPage = () => {
+  const state = useStore((s) => s.state);
 
   const [secret, setSecret] = useState("");
   const secretInput = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    toast("You'll find your secret on the host", { duration: Infinity });
+  }, []);
+
+  useEffect(() => {
     if (secret === null || secret.length !== 6) return;
 
-    const t = toast.loading("Joining tunnel", { duration: 5000 });
+    const t = toast.loading("Joining tunnel");
     sessionStorage.clear();
 
     fetch(
@@ -30,21 +33,27 @@ export const Join = () => {
       .then((res: { token: string }) => {
         if (!res.token) throw new Error("Malformed API response");
 
-        toast.success("Ready", { id: t, duration: 10_000 });
-
+        toast.dismiss();
         sessionStorage.setItem("token", res.token);
         sessionStorage.setItem("peerId", "2");
 
-        setState("ready");
-        location.pathname = "/tunnel";
+        navigate("/tunnel");
       })
       .catch(() => {
-        toast.error(
-          <ErrorToast>
-            Could not join tunnel, please try again in a bit!
-          </ErrorToast>,
-          { id: t, duration: 5000 }
-        );
+        toast.error("Could not join tunnel, please try again in a bit!", {
+          id: t,
+          duration: 10_000,
+          description: (
+            <a
+              href="https://github.com/sdnts/blobs/issues/new"
+              className="underline"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Report an issue
+            </a>
+          ),
+        });
 
         secretInput.current?.focus();
         animate(secretInput.current!, { outlineColor: "#F52F2F" });
@@ -72,6 +81,7 @@ export const Join = () => {
         <span className="text-gray text-2xl">Secret</span>
         <input
           ref={secretInput}
+          name="secret"
           className={clsx(
             "w-[9ch]",
             "px-4 pt-6 pb-2",

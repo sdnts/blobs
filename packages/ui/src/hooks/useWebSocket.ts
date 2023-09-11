@@ -2,12 +2,13 @@ import type { BlobId, Message } from "@blobs/protocol";
 import { MessageCode, deserialize, serialize } from "@blobs/protocol";
 import { useWebSocket as usePartySocket } from "partysocket/react";
 import { useEffect, useRef } from "react";
-import { useStore } from "../store";
+import { formatSize, useStore } from "../store";
+import { toast } from "sonner";
 
 const WS_SCHEME = import.meta.env.DEV ? "ws://" : "wss://";
 const WS_HOST = import.meta.env.PUBLIC_API_HOST;
 
-export function useWebSocket(peerId: string, token: string) {
+export function useWebSocket(token: string) {
   const [setState, uploads, uploaded] = useStore((s) => [
     s.setState,
     s.uploads,
@@ -19,11 +20,11 @@ export function useWebSocket(peerId: string, token: string) {
   >({});
 
   const ws = usePartySocket(
-    `${WS_SCHEME}${WS_HOST}/tunnel?t=${encodeURIComponent(token)}&p=${peerId}`,
+    `${WS_SCHEME}${WS_HOST}/tunnel?t=${encodeURIComponent(token)}`,
     undefined,
     {
       maxRetries: 10,
-      onOpen: () => setState("waiting"),
+      onOpen: () => {},
       onClose: () => setState("disconnected"),
       onError: () => setState("fatal"),
       onMessage: async (e) => {
@@ -34,16 +35,23 @@ export function useWebSocket(peerId: string, token: string) {
         if (message.err) return;
 
         switch (message.val.code) {
-          case MessageCode.PeerConnected:
+          case MessageCode.PeerConnected: {
+            toast.dismiss();
+            toast.success("Ready", { duration: 10_000 });
             return setState("ready");
+          }
 
           case MessageCode.PeerDisconnected:
             return setState("waiting");
 
           case MessageCode.Metadata: {
-            if (message.val.id.owner === peerId) return;
+            toast.loading(
+              `Downloading ${message.val.name} (${formatSize(
+                message.val.size
+              )})`,
+              { description: "Watch your downloads", duration: 5000 }
+            );
 
-            console.log("Trigger download", message.val);
             const params = new URLSearchParams();
             params.set("t", token);
             params.set("o", message.val.id.owner);
@@ -57,8 +65,7 @@ export function useWebSocket(peerId: string, token: string) {
           }
 
           case MessageCode.DataRequest: {
-            const { owner, id: blobId } = message.val.id;
-            if (owner !== peerId) return;
+            const { id: blobId } = message.val.id;
 
             const blob = uploads.find((u) => u.id === blobId);
             if (!blob) return;

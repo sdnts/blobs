@@ -1,7 +1,7 @@
-import { MessageCode } from "@blobs/protocol";
+import { MessageCode, type PeerId } from "@blobs/protocol";
 import { CloudArrowUp } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { Fragment, Suspense } from "react";
+import { Fragment, Suspense, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { formatSize, useStore } from "../store";
@@ -9,29 +9,23 @@ import { ErrorBoundary } from "./ErrorBoundary";
 import { suspend } from "suspend-react";
 import { toast } from "sonner";
 
-export const Tunnel = () => {
+export const TunnelPage = () => {
   return (
     <ErrorBoundary>
       <Suspense fallback={<Fragment />}>
-        <Peer />
+        <Tunnel />
       </Suspense>
     </ErrorBoundary>
   );
 };
 
 type Session = {
-  peerId: string;
+  peerId: PeerId;
   token: string;
   secret?: string;
 };
 
-const Peer = () => {
-  const [state, uploads, upload] = useStore((s) => [
-    s.state,
-    s.uploads,
-    s.upload,
-  ]);
-
+const Tunnel = () => {
   const session = suspend(
     () =>
       new Promise<Session>((resolve, reject) => {
@@ -41,18 +35,35 @@ const Peer = () => {
 
         if (!peerId || !token) {
           toast.error("An unrecoverable error has occurred", {
-            duration: 20_000,
+            duration: 10_000,
           });
           if (!peerId) return reject("Missing peerId in session");
           if (!token) return reject("Missing token in session");
         }
+
+        if (peerId !== "1" && peerId !== "2")
+          return reject("Invalid peerId in session");
 
         return resolve({ peerId, token, secret });
       }),
     []
   );
 
-  const ws = useWebSocket(session.peerId, session.token);
+  const [state, uploads, upload] = useStore((s) => [
+    s.state,
+    s.uploads,
+    s.upload,
+  ]);
+
+  useEffect(() => {
+    sessionStorage.removeItem("secret");
+
+    toast("Ready", {
+      description: "Drop files here to stream them to the other end!",
+    });
+  }, []);
+
+  const ws = useWebSocket(session.token);
 
   const { open, getRootProps, getInputProps, isDragActive } = useDropzone({
     noClick: true,

@@ -1,7 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { HeroText } from "../components/HeroText";
-import { New } from "../components/New";
+import { NewButton } from "../components/NewButton";
 ---
 
 <Layout>
@@ -12,7 +12,7 @@ import { New } from "../components/New";
         <HeroText title="for">FR</HeroText>
       </div>
 
-      <div class="flex justify-between items-end">
+      <div class="flex justify-between items-end" data-testid="hero">
         <div>
           <HeroText title="the">THE</HeroText>
           <HeroText title="Web">WE</HeroText>
@@ -21,15 +21,18 @@ import { New } from "../components/New";
         <section
           class:list={["flex flex-col gap-6", "mb-[2rem]", "font-normal"]}
         >
-          <New client:load />
+          <NewButton client:load />
+
           <a
             href="/tunnel/join"
             class:list={[
               "text-black border-2 border-black",
               "px-6 py-3",
-              "rounded-lg",
+              "rounded-lg select-none",
+              "transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 active:shadow-sm",
               "text-2xl md:text-4xl lg:text-3xl text-center",
             ]}
+            data-testid="join"
           >
             Receive
           </a>
@@ -37,6 +40,12 @@ import { New } from "../components/New";
       </div>
     </section>
   </main>
+
+  <script>
+    import { toast } from "sonner";
+
+    document.addEventListener("astro:after-swap", () => toast.dismiss());
+  </script>
 
   <script>
     import { animate, stagger, spring } from "motion";
@@ -63,6 +72,6 @@ import { New } from "../components/New";
     };
 
     animateIn();
-    document.addEventListener("astro:after-swap", animateIn);
+    document.addEventListener("astro:after-swap", () => animateIn());
   </script>
 </Layout>
