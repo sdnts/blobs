@@ -50,8 +50,9 @@ export class Tunnel implements DurableObject {
         message.val
       );
 
+      // Relay metadata to the _other_ websocket
       return this.state
-        .getWebSockets()
+        .getWebSockets(message.val.id.owner === "1" ? "2" : "1")
         .forEach((ws) => ws.send(serialize(message.val)));
     }
 
@@ -109,6 +110,7 @@ export class Tunnel implements DurableObject {
     const owner = request.query.o;
     if (!owner) return error(400, "Blob owner is required");
     if (Array.isArray(owner)) return error(400, "Multiple blob owners");
+    if (owner !== "1" && owner !== "2") return error(400, "Invalid blob owner");
 
     const id = request.query.i;
     if (!id) return error(400, "Blob ID is required");

@@ -2,7 +2,7 @@ import { pack } from "msgpackr/pack";
 import { unpack } from "msgpackr/unpack";
 import { Err, Ok, Result } from "ts-results";
 
-export type PeerId = string;
+export type PeerId = "1" | "2";
 export type BlobId = { owner: PeerId; id: string };
 export type BlobMetadata = {
   id: BlobId;
