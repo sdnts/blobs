@@ -23,8 +23,9 @@ test("can join existing tunnels", async () => {
   expect(body.secret).toBeUndefined();
 
   expect(body.token).not.toBeUndefined();
-  const [signature, actorId, ip] = body.token.split("|");
-  expect(signature).not.toBeUndefined();
+  const [peerId, actorId, ip, signature] = body.token.split("|");
+  expect(peerId).not.toBeUndefined();
   expect(actorId).not.toBeUndefined();
   expect(ip).not.toBeUndefined();
+  expect(signature).not.toBeUndefined();
 });
