@@ -2,14 +2,7 @@ import { Router, error } from "itty-router";
 import { customAlphabet } from "nanoid";
 import { sign } from "./auth";
 import { Context } from "./context";
-import {
-  TunnelRequest,
-  withAction,
-  withAuth,
-  withIp,
-  withTags,
-  withTunnel,
-} from "./middleware";
+import { TunnelRequest, withAuth, withTags, withTunnel } from "./middleware";
 
 export type Env = {
   environment: "production" | "development";
@@ -31,9 +24,8 @@ export default {
     const ctx = new Context(env, waitUntil);
 
     return Router<TunnelRequest, [Context]>()
-      .options("*", withAction("preflight"), () => new Response(null))
-      .all("*", withIp(), withTags())
-      .put("/new", withAction("new"), async (request, ctx) => {
+      .options("*", withTags("preflight"), () => new Response(null))
+      .put("/new", withTags("new"), async (request, ctx) => {
         // TODO: For a sustained load of 10RPS for about an hour, there's a significant
         // possibility of secret collision. That's a lot of requests though, so we'll
         // deal with it if we ever get there.
@@ -41,7 +33,9 @@ export default {
           ctx.env.environment === "development" ? "000000" : nanoid();
         const tunnelId = ctx.env.tunnel.newUniqueId().toString();
 
-        await ctx.env.tunnels.put(secret, tunnelId, { expirationTtl: 10 * 60 });
+        await ctx.env.tunnels.put(secret, tunnelId, {
+          expirationTtl: 10 * 60,
+        });
 
         return new Response(
           JSON.stringify({
@@ -51,7 +45,7 @@ export default {
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
       })
-      .put("/join", withAction("join"), async (request, ctx) => {
+      .put("/join", withTags("join"), async (request, ctx) => {
         const secret = request.query["s"];
         if (!secret) return error(400, "Missing secret");
         if (Array.isArray(secret)) return error(400, "Multiple secrets");
@@ -68,8 +62,8 @@ export default {
           { status: 200, headers: { "Content-Type": "application/json" } }
         );
       })
-      .get("/tunnel", withAuth(), withAction("tunnel"), withTunnel())
-      .get("/download", withAuth(), withAction("download"), withTunnel())
+      .get("/tunnel", withTags("tunnel"), withAuth(), withTunnel())
+      .get("/download", withTags("download"), withAuth(), withTunnel())
       .all("*", () => error(400, "Bad pathname"))
       .handle(request, ctx)
       .then((r: Response) => {

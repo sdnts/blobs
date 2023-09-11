@@ -7,7 +7,7 @@ import {
 } from "@blobs/protocol";
 import { Router, error } from "itty-router";
 import { Context } from "./context";
-import { TunnelRequest, withAction, withIp, withTags } from "./middleware";
+import { TunnelRequest, withAuth, withTags } from "./middleware";
 import { WebSocketSource } from "./stream";
 import { Env } from "./worker";
 
@@ -17,21 +17,15 @@ export class Tunnel implements DurableObject {
   constructor(
     private state: DurableObjectState,
     private env: Env
-  ) {}
+  ) { }
 
   async fetch(request: Request): Promise<Response> {
     const ctx = new Context(this.env, this.state.waitUntil);
 
     return Router<TunnelRequest, [Context]>()
-      .get("/tunnel", withIp(), withTags(), withAction("tunnel"), this.Tunnel)
-      .get(
-        "/download",
-        withIp(),
-        withTags(),
-        withAction("download"),
-        this.Download
-      )
-      .all("*", () => error(500, "Bad pathname"))
+      .get("/tunnel", withTags("tunnel"), withAuth(), this.Tunnel)
+      .get("/download", withTags("download"), withAuth(), this.Download)
+      .all("*", withTags("unknown"), () => error(500, "Bad pathname"))
       .handle(request, ctx)
       .then((response) => {
         ctx.tag({ status: String(response.status) });
@@ -97,17 +91,13 @@ export class Tunnel implements DurableObject {
     if (!upgrade) return error(400, "Missing Upgrade header");
     if (upgrade !== "websocket") return error(400, "Invalid Upgrade header");
 
-    const peerId = request.query.p;
-    if (!peerId) return error(400, "peerId is required");
-    if (Array.isArray(peerId)) return error(400, "Multiple peerIds");
-
     const peer = new WebSocketPair();
     const peers = this.state.getWebSockets();
     peers.forEach((ws) =>
       ws.send(serialize({ code: MessageCode.PeerConnected }))
     );
 
-    this.state.acceptWebSocket(peer[0], [peerId]);
+    this.state.acceptWebSocket(peer[0], [request.peerId]);
 
     return new Response(null, { status: 101, webSocket: peer[1] });
   };
