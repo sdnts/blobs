@@ -11,13 +11,9 @@ export const Status = () => {
       "#status",
       {
         fill: clsx({
-          "#FFA800":
-            state === "idle" ||
-            state === "connecting" ||
-            state === "reconnecting" ||
-            state === "waiting",
+          "#FFA800": state === "waiting",
           "#8AD22E": state === "ready",
-          "#F52F2F": state === "disconnected",
+          "#F52F2F": state === "disconnected" || state === "fatal",
         }),
       },
       { duration: 0.1 }
@@ -40,11 +36,9 @@ export const Status = () => {
           "status-text"
         )}
       >
-        {state === "connecting" && "Connecting"}
         {state === "waiting" && "Waiting"}
         {state === "ready" && "Ready"}
-        {state === "reconnecting" && "Reconnecting"}
-        {state === "disconnected" && "Error"}
+        {state === "disconnected" && "Disconnected"}
       </span>
     </p>
   );

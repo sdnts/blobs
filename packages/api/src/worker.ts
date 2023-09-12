@@ -1,6 +1,6 @@
 import { Router, error } from "itty-router";
 import { Context } from "./context";
-import { TunnelRequest, withAuth } from "./middleware";
+import { TunnelRequest, withAuth, withIp } from "./middleware";
 
 export type Env = {
   environment: "production" | "development";
@@ -41,12 +41,12 @@ export default {
           .get(ctx.env.tunnels.idFromString(tunnelId))
           .fetch(request);
       })
-      .get("/tunnel", withAuth(), (request, ctx) =>
+      .get("/tunnel", withIp(), withAuth(), (request, ctx) =>
         ctx.env.tunnels
           .get(ctx.env.tunnels.idFromString(request.tunnelId))
           .fetch(request)
       )
-      .get("/download", withAuth(), (request, ctx) =>
+      .get("/download", withIp(), withAuth(), (request, ctx) =>
         ctx.env.tunnels
           .get(ctx.env.tunnels.idFromString(request.tunnelId))
           .fetch(request)

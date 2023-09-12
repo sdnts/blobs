@@ -21,22 +21,15 @@ export const NewButton = () => {
         if (!res.secret || !res.token)
           throw new Error("Malformed API response");
 
+        toast.dismiss(t);
         setState("waiting");
-        toast.success("Tunnel created", {
-          id: t,
-          duration: Infinity,
-          description: (
-            <span>
-              Use the secret <strong>{res.secret}</strong> to join this tunnel
-            </span>
-          ),
-        });
 
         // I'd have liked to use a session cookie for auth, but I really want
         // tab-level storage: stuff that is unique to a tab, that gets pruned
         // when it is closed.
         sessionStorage.setItem("secret", res.secret);
         sessionStorage.setItem("token", res.token);
+        sessionStorage.setItem("peerId", "1");
 
         navigate("/tunnel/new");
       })

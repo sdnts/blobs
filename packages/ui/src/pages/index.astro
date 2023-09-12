@@ -42,12 +42,6 @@ import { NewButton } from "../components/NewButton";
   </main>
 
   <script>
-    import { toast } from "sonner";
-
-    document.addEventListener("astro:after-swap", () => toast.dismiss());
-  </script>
-
-  <script>
     import { animate, stagger, spring } from "motion";
 
     const motionMediaQuery = window.matchMedia(

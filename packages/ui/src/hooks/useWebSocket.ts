@@ -9,7 +9,8 @@ const WS_SCHEME = import.meta.env.DEV ? "ws://" : "wss://";
 const WS_HOST = import.meta.env.PUBLIC_API_HOST;
 
 export function useWebSocket(token: string) {
-  const [setState, uploads, uploaded] = useStore((s) => [
+  const [state, setState, uploads, uploaded] = useStore((s) => [
+    s.state,
     s.setState,
     s.uploads,
     s.uploaded,
@@ -24,7 +25,9 @@ export function useWebSocket(token: string) {
     undefined,
     {
       maxRetries: 10,
-      onOpen: () => {},
+      onOpen: () => {
+        if (state === "disconnected") setState("ready");
+      },
       onClose: () => setState("disconnected"),
       onError: () => setState("fatal"),
       onMessage: async (e) => {
@@ -35,11 +38,8 @@ export function useWebSocket(token: string) {
         if (message.err) return;
 
         switch (message.val.code) {
-          case MessageCode.PeerConnected: {
-            toast.dismiss();
-            toast.success("Ready", { duration: 10_000 });
+          case MessageCode.PeerConnected:
             return setState("ready");
-          }
 
           case MessageCode.PeerDisconnected:
             return setState("waiting");
@@ -49,7 +49,7 @@ export function useWebSocket(token: string) {
               `Downloading ${message.val.name} (${formatSize(
                 message.val.size
               )})`,
-              { description: "Watch your downloads", duration: 5000 }
+              { description: "Watch your downloads", duration: 10_000 }
             );
 
             const params = new URLSearchParams();

@@ -1,13 +1,13 @@
 import { MessageCode, type PeerId } from "@blobs/protocol";
 import { CloudArrowUp } from "@phosphor-icons/react";
 import clsx from "clsx";
-import { Fragment, Suspense, useEffect } from "react";
+import { Fragment, Suspense } from "react";
 import { useDropzone } from "react-dropzone";
+import { toast } from "sonner";
+import { suspend } from "suspend-react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { formatSize, useStore } from "../store";
 import { ErrorBoundary } from "./ErrorBoundary";
-import { suspend } from "suspend-react";
-import { toast } from "sonner";
 
 export const TunnelPage = () => {
   return (
@@ -49,19 +49,7 @@ const Tunnel = () => {
     []
   );
 
-  const [state, uploads, upload] = useStore((s) => [
-    s.state,
-    s.uploads,
-    s.upload,
-  ]);
-
-  useEffect(() => {
-    sessionStorage.removeItem("secret");
-
-    toast("Ready", {
-      description: "Drop files here to stream them to the other end!",
-    });
-  }, []);
+  const [uploads, upload] = useStore((s) => [s.uploads, s.upload]);
 
   const ws = useWebSocket(session.token);
 
@@ -86,21 +74,6 @@ const Tunnel = () => {
   return (
     <main className="flex-1 flex flex-col items-center" {...getRootProps()}>
       <input {...getInputProps()} />
-      <section
-        id="secret"
-        className={clsx("flex flex-col items-center gap-4", "mt-36")}
-      >
-        {state !== "ready" && (
-          <>
-            <span className="text-gray text-2xl tracking-normal">
-              Use this secret to receive
-            </span>
-            <span id="secret" className="font-bold text-9xl tracking-widest">
-              {session.secret}
-            </span>
-          </>
-        )}
-      </section>
 
       <section id="files" className="flex flex-col items-center">
         {uploads.length > 0 && (

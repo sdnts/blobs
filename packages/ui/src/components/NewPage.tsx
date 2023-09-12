@@ -4,6 +4,8 @@ import { suspend } from "suspend-react";
 import { useWebSocket } from "../hooks/useWebSocket";
 import { navigate, useStore } from "../store";
 import { ErrorBoundary } from "./ErrorBoundary";
+import { toast } from "sonner";
+
 export const NewPage = () => {
   return (
     <ErrorBoundary>
@@ -14,26 +16,46 @@ export const NewPage = () => {
   );
 };
 
+type Session = {
+  token: string;
+  secret: string;
+};
+
 const New = () => {
-  const secret = suspend(
+  const session = suspend(
     () =>
-      new Promise<string>((resolve, reject) => {
+      new Promise<Session>((resolve, reject) => {
         const secret = sessionStorage.getItem("secret");
-        if (!secret) return reject();
-        return resolve(secret);
+        const token = sessionStorage.getItem("token");
+
+        if (!secret || !token) return reject();
+
+        return resolve({ token, secret });
       }),
     []
   );
 
-  useWebSocket(secret);
+  const state = useStore((s) => s.state);
 
-  const [state, setState] = useStore((s) => [s.state, s.setState]);
+  useWebSocket(session.token);
 
   useEffect(() => {
-    setState("waiting");
+    toast.success("Tunnel created", {
+      duration: Infinity,
+      description: (
+        <span>
+          Use the secret <strong>{session.secret}</strong> to join this tunnel
+        </span>
+      ),
+    });
   }, []);
+
   useEffect(() => {
-    if (state === "ready") navigate("/tunnel");
+    if (state === "ready") {
+      sessionStorage.removeItem("secret");
+      toast.dismiss();
+      navigate("/tunnel");
+    }
   }, [state]);
 
   return (
@@ -42,17 +64,15 @@ const New = () => {
         id="secret"
         className={clsx("flex flex-col items-center gap-4", "mt-36")}
       >
-        <>
-          <span className="text-gray text-2xl tracking-normal">
-            Use this secret to receive
-          </span>
-          <span
-            data-testid="secret"
-            className="font-bold text-9xl tracking-widest"
-          >
-            {secret}
-          </span>
-        </>
+        <span className="text-gray text-2xl tracking-normal">
+          Use this secret to receive
+        </span>
+        <span
+          data-testid="secret"
+          className="font-bold text-9xl tracking-widest"
+        >
+          {session.secret}
+        </span>
       </section>
     </main>
   );

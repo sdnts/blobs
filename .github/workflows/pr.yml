@@ -61,6 +61,7 @@ jobs:
         with:
           node-version: 18
           cache: "yarn"
+      - run: yarn
       - run: yarn ui playwright install --with-deps
       - run: yarn ui test
       - uses: actions/upload-artifact@v3

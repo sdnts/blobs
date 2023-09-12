@@ -2,13 +2,13 @@ import clsx from "clsx";
 import { animate, timeline } from "motion";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { navigate, useStore } from "../store";
+import { navigate } from "../store";
 
 export const JoinPage = () => {
-  const state = useStore((s) => s.state);
-
   const [secret, setSecret] = useState("");
   const secretInput = useRef<HTMLInputElement>(null);
+
+  const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
     toast("You'll find your secret on the host", { duration: Infinity });
@@ -19,6 +19,7 @@ export const JoinPage = () => {
 
     const t = toast.loading("Joining tunnel");
     sessionStorage.clear();
+    setConnecting(true);
 
     fetch(
       `http${import.meta.env.PROD ? "s" : ""}://${
@@ -26,6 +27,9 @@ export const JoinPage = () => {
       }/join?s=${secret}`,
       { method: "PUT" }
     )
+      .finally(() => {
+        setConnecting(false);
+      })
       .then((res) => {
         if (res.status === 200) return res.json();
         return Promise.reject();
@@ -91,7 +95,7 @@ export const JoinPage = () => {
           )}
           autoFocus
           autoComplete="off"
-          disabled={state === "connecting"}
+          disabled={connecting}
           pattern="[a-zA-Z0-9]+"
           maxLength={6}
           value={secret}

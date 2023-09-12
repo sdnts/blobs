@@ -4,11 +4,8 @@ import { shallow } from "zustand/shallow";
 import { createWithEqualityFn } from "zustand/traditional";
 
 type TunnelState =
-  | "idle" // No WebSocket activity
-  | "connecting" // This peer is connecting
-  | "waiting" // Waiting on the other peer
+  | "waiting" // Waiting for the other peer
   | "ready" // Both peers are connected
-  | "reconnecting" // This peer is reconnecting
   | "disconnected" // This peer is disconnected
   | "fatal"; // This peer encountered an unrecoverable error
 
@@ -27,11 +24,15 @@ type Store = {
 
 export const useStore = createWithEqualityFn<Store>()(
   (set) => ({
-    state: "idle",
+    state: "waiting",
     setState: (state) => {
       set({ state });
 
-      if (state === "ready") toast.success("Ready");
+      if (state === "ready")
+        toast("Ready", {
+          description: "Drop files here to stream them to the other end!",
+        });
+
       if (state === "disconnected") toast.error("Disconnected, reconnecting");
     },
 

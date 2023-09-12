@@ -36,17 +36,12 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
 
           <div className="flex gap-6">
-            <a
-              href="/"
-              className="text-xl text-black"
-              onClick={() => toast.dismiss()}
-            >
+            <a href="/" className="text-xl text-black">
               Start over
             </a>
             <a
               href="https://github.com/sdnts/blobs/issues/new"
               className="text-xl text-gray"
-              onClick={() => toast.dismiss()}
             >
               Report a bug
             </a>

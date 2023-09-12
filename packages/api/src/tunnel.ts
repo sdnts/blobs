@@ -95,7 +95,11 @@ export class Tunnel implements DurableObject {
 
   webSocketClose() {
     const peers = this.state.getWebSockets();
-    if (peers.length === 0) this.state.storage.deleteAll();
+    peers.forEach((ws) =>
+      ws.send(serialize({ code: MessageCode.PeerDisconnected }))
+    );
+
+    if (peers.length === 0) void this.state.storage.deleteAll();
   }
 
   // ---
