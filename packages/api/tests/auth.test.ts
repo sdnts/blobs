@@ -5,7 +5,7 @@ import { sign, verify } from "../src/auth";
 
 test("sign", async () => {
   const token = await sign("1", "abcd", "1.1.1.1", {
-    secret: "wishiwasacookie",
+    authSecret: "wishiwasacookie",
   });
   expect(token).not.toBeUndefined();
 
@@ -17,7 +17,7 @@ test("sign", async () => {
 });
 
 test("verify", async () => {
-  const env = { secret: "wishiwasacookie" };
+  const env = { authSecret: "wishiwasacookie" };
   const token = await sign("2", "abcd", "1.1.1.1", env);
 
   const auth = await verify(token, env);
@@ -30,7 +30,7 @@ test("verify", async () => {
 });
 
 test("verify (invalid peerId)", async () => {
-  const env = { secret: "wishiwasacookie" };
+  const env = { authSecret: "wishiwasacookie" };
   const token = await sign("nonsense", "abcd", "1.1.1.1", env);
 
   const auth = await verify(token, env);
@@ -38,7 +38,7 @@ test("verify (invalid peerId)", async () => {
 });
 
 test("verify (invalid tunnelId)", async () => {
-  const env = { secret: "wishiwasacookie" };
+  const env = { authSecret: "wishiwasacookie" };
   const token = await sign("1", "", "1.1.1.1", env);
 
   const auth = await verify(token, env);
@@ -46,7 +46,7 @@ test("verify (invalid tunnelId)", async () => {
 });
 
 test("verify (invalid ip)", async () => {
-  const env = { secret: "wishiwasacookie" };
+  const env = { authSecret: "wishiwasacookie" };
   const token = await sign("1", "abcd", "", env);
 
   const auth = await verify(token, env);
@@ -54,7 +54,7 @@ test("verify (invalid ip)", async () => {
 });
 
 test("verify (invalid signature)", async () => {
-  const env = { secret: "wishiwasacookie" };
+  const env = { authSecret: "wishiwasacookie" };
   const token = await sign("1", "abcd", "1.1.1.1", env);
   const tokenParts = token.split("|");
 

@@ -57,8 +57,7 @@ export class WebSocketSource implements UnderlyingSource {
   #id: BlobId;
   #ws: WebSocket;
   controller?: ReadableStreamDefaultController;
-  pullResolve?: () => void;
-  pullReject?: () => void;
+  pullPromise?: { resolve: () => void; reject: () => void };
 
   constructor(ws: WebSocket, id: BlobId) {
     this.#id = id;
@@ -82,8 +81,7 @@ export class WebSocketSource implements UnderlyingSource {
     // TODO: Are we utilizing the stream to its full potential here or are we
     // constantly enqueue-ing fewer bytes than we can?
     return new Promise((resolve, reject) => {
-      this.pullResolve = resolve;
-      this.pullReject = reject;
+      this.pullPromise = { resolve, reject };
     });
   }
 
@@ -97,7 +95,7 @@ export class WebSocketSource implements UnderlyingSource {
     if (message.code === MessageCode.DataChunk) {
       if (message.bytes.length === 0) {
         this.controller?.close();
-        this.pullResolve?.();
+        this.pullPromise?.resolve();
         return;
       }
 
@@ -105,12 +103,12 @@ export class WebSocketSource implements UnderlyingSource {
     }
 
     if (message.code === MessageCode.DataChunkEnd) {
-      return this.pullResolve?.();
+      return this.pullPromise?.resolve();
     }
   };
 
   onClose() {
     this.controller?.close();
-    this.pullReject?.();
+    this.pullPromise?.reject();
   }
 }

@@ -4,13 +4,13 @@ export async function sign(
   peerId: string,
   tunnelId: string,
   ip: string,
-  env: Pick<Context["env"], "secret">
+  env: Pick<Context["env"], "authSecret">
 ): Promise<string> {
   const te = new TextEncoder();
 
   const key = await crypto.subtle.importKey(
     "raw",
-    te.encode(env.secret),
+    te.encode(env.authSecret),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign"]
@@ -28,10 +28,10 @@ export async function sign(
 
 export async function verify(
   token: string,
-  env: Pick<Context["env"], "secret">
+  env: Pick<Context["env"], "authSecret">
 ): Promise<false | { peerId: string; tunnelId: string; ip: string }> {
   const [peerId, tunnelId, ip] = token.split("|");
-  if (!peerId || (peerId !== "1" && peerId !== "2")) return false;
+  if (peerId !== "1" && peerId !== "2") return false;
   if (!ip) return false;
   if (!tunnelId) return false;
 

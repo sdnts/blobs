@@ -25,27 +25,23 @@ export const withIp =
     request.ip = ip;
   };
 
-type Action = "preflight" | "new" | "join" | "tunnel" | "download" | "unknown";
-export const withTags =
-  (action: Action): Middleware =>
-  (request, ctx) => {
-    let ip = request.headers.get("cf-connecting-ip");
-    if (ctx.env.environment === "development") ip = "127.0.0.1";
-    if (!ip) return error(400, "Missing IP");
-
-    request.ip = ip;
-
+export const withRayId =
+  (): Middleware =>
+  (request, ctx): void | Response => {
+    // In production, there _should_ always be a Ray ID that uniquely identifies
+    // a request, but we'll set up a default just in case.
+    // Development doesn't, so it'll be useful then too.
     const rayId = request.headers.get("cf-ray") ?? nanoid();
-    request.rayId = rayId;
-
-    ctx.tag({
-      environment: ctx.env.environment,
-      rayId, // Helps with correlation of Worker and DO requests
-      method: request.method,
-      path: new URL(request.url).pathname,
-      action,
-    });
+    ctx.tag({ rayId });
   };
+
+export const withPath = (): Middleware => (request, ctx) => {
+  ctx.tag({
+    environment: ctx.env.environment,
+    method: request.method,
+    path: new URL(request.url).pathname,
+  });
+};
 
 export const withAuth = (): Middleware => async (request, ctx) => {
   const token = request.query.t;
@@ -61,21 +57,6 @@ export const withAuth = (): Middleware => async (request, ctx) => {
 
   request.peerId = peerId;
   request.tunnelId = tunnelId;
+
   ctx.tag({ peerId, tunnelId });
-};
-
-export const withTunnel = (): Middleware => (request, ctx) => {
-  const tunnel = ctx.env.tunnel.get(
-    ctx.env.tunnel.idFromString(request.tunnelId)
-  );
-
-  // In development, we generate a ray id
-  // Manually set the rayId header since we may generate it in some situations
-  // (in development). Request headers are immutable, hence the cloning.
-  // This is mostly a fail-safe. It ensures that the cf-ray is the same for the
-  // Worker and the DO. That helps with request correlation in logs.
-  const headers = new Headers(request.headers);
-  headers.set("cf-ray", request.rayId);
-
-  return tunnel.fetch(request, { headers });
 };

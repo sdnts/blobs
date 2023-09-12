@@ -7,9 +7,19 @@ import {
 } from "@blobs/protocol";
 import { Router, error } from "itty-router";
 import { Context } from "./context";
-import { TunnelRequest, withAuth, withTags } from "./middleware";
+import {
+  TunnelRequest,
+  withAuth,
+  withIp,
+  withPath,
+  withRayId,
+} from "./middleware";
 import { WebSocketSource } from "./stream";
 import { Env } from "./worker";
+import { sign } from "./auth";
+import { customAlphabet } from "nanoid";
+
+const nanoid = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 6);
 
 export class Tunnel implements DurableObject {
   private downloads: Array<{ id: BlobId; stream: WebSocketSource }> = [];
@@ -17,15 +27,18 @@ export class Tunnel implements DurableObject {
   constructor(
     private state: DurableObjectState,
     private env: Env
-  ) { }
+  ) {}
 
   async fetch(request: Request): Promise<Response> {
     const ctx = new Context(this.env, this.state.waitUntil);
 
     return Router<TunnelRequest, [Context]>()
-      .get("/tunnel", withTags("tunnel"), withAuth(), this.Tunnel)
-      .get("/download", withTags("download"), withAuth(), this.Download)
-      .all("*", withTags("unknown"), () => error(500, "Bad pathname"))
+      .all("*", withPath(), withRayId(), withIp())
+      .put("/new", this.New)
+      .put("/join", this.Join)
+      .get("/tunnel", withAuth(), this.Tunnel)
+      .get("/download", withAuth(), this.Download)
+      .all("*", () => error(500, "Bad pathname"))
       .handle(request, ctx)
       .then((response) => {
         ctx.tag({ status: response.status });
@@ -87,17 +100,64 @@ export class Tunnel implements DurableObject {
 
   // ---
 
+  private New = async (
+    request: TunnelRequest,
+    ctx: Context
+  ): Promise<Response> => {
+    // Secret collision is bad, but the only way to avoid it is to have longer
+    // nano IDs. With our custom alphabet, there's significant (1%) possibility
+    // of collision for a sustained load of 10RPS for an hour.
+    // https://zelark.github.io/nano-id-cc/
+    // If we ever get to that scale, we'll have to increase the length of the
+    // secrets, or switch to a new format.
+    const secret = ctx.env.environment === "development" ? "000000" : nanoid();
+    const tunnelId = this.state.id.toString();
+
+    // Time out this tunnel after a short amount of time. This allows secret
+    // reuse (which in turn helps with collisions)
+    await ctx.env.secrets.put(secret, tunnelId, { expirationTtl: 300 }); // 5m
+
+    return new Response(
+      JSON.stringify({
+        secret,
+        token: await sign("1", tunnelId, request.ip, ctx.env),
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+
+  private Join = async (
+    request: TunnelRequest,
+    ctx: Context
+  ): Promise<Response> => {
+    const secret = request.query["s"];
+    if (!secret) return error(400, "Missing secret");
+    if (Array.isArray(secret)) return error(400, "Multiple secrets");
+
+    // Prevent anyone else from joining. Also helps with secret reuse.
+    await ctx.env.secrets.delete(secret);
+
+    const tunnelId = this.state.id.toString();
+
+    return new Response(
+      JSON.stringify({ token: await sign("2", tunnelId, request.ip, ctx.env) }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+  };
+
   private Tunnel = (request: TunnelRequest, _ctx: Context): Response => {
     const upgrade = request.headers.get("Upgrade");
     if (!upgrade) return error(400, "Missing Upgrade header");
     if (upgrade !== "websocket") return error(400, "Invalid Upgrade header");
 
-    const peer = new WebSocketPair();
     const peers = this.state.getWebSockets();
+    if (peers.length >= 2) return error(403, "Tunnel is full");
+
     peers.forEach((ws) =>
       ws.send(serialize({ code: MessageCode.PeerConnected }))
     );
 
+    const peer = new WebSocketPair();
     this.state.acceptWebSocket(peer[0], [request.peerId]);
 
     return new Response(null, { status: 101, webSocket: peer[1] });
