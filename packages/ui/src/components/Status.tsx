@@ -35,6 +35,7 @@ export const Status = () => {
           "block",
           "status-text"
         )}
+        data-testid="status"
       >
         {state === "waiting" && "Waiting"}
         {state === "ready" && "Ready"}

@@ -1,8 +1,10 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { Status } from "../../components/Status";
 import { NewPage } from "../../components/NewPage";
 ---
 
 <Layout>
+  <Status slot="status" client:idle />
   <NewPage client:only="react" />
 </Layout>

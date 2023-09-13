@@ -10,12 +10,7 @@ export const NewButton = () => {
 
     const t = toast.loading("Creating tunnel");
 
-    fetch(
-      `http${import.meta.env.PROD ? "s" : ""}://${
-        import.meta.env.PUBLIC_API_HOST
-      }/new`,
-      { method: "PUT" }
-    )
+    fetch(`//${import.meta.env.PUBLIC_API_HOST}/new`, { method: "PUT" })
       .then((res) => res.json())
       .then((res: { secret: string; token: string }) => {
         if (!res.secret || !res.token)

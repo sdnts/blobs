@@ -43,7 +43,7 @@ const New = () => {
     toast.success("Tunnel created", {
       duration: Infinity,
       description: (
-        <span>
+        <span data-testid="toast-success">
           Use the secret <strong>{session.secret}</strong> to join this tunnel
         </span>
       ),

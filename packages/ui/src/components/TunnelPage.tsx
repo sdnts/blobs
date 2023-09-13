@@ -22,7 +22,6 @@ export const TunnelPage = () => {
 type Session = {
   peerId: PeerId;
   token: string;
-  secret?: string;
 };
 
 const Tunnel = () => {
@@ -31,7 +30,6 @@ const Tunnel = () => {
       new Promise<Session>((resolve, reject) => {
         const peerId = sessionStorage.getItem("peerId");
         const token = sessionStorage.getItem("token");
-        const secret = sessionStorage.getItem("secret") ?? undefined;
 
         if (!peerId || !token) {
           toast.error("An unrecoverable error has occurred", {
@@ -44,25 +42,26 @@ const Tunnel = () => {
         if (peerId !== "1" && peerId !== "2")
           return reject("Invalid peerId in session");
 
-        return resolve({ peerId, token, secret });
+        return resolve({ peerId, token });
       }),
     []
   );
 
+  console.log(session);
+
   const [uploads, upload] = useStore((s) => [s.uploads, s.upload]);
 
   const ws = useWebSocket(session.token);
-
   const { open, getRootProps, getInputProps, isDragActive } = useDropzone({
     noClick: true,
     noKeyboard: true,
     preventDropOnDocument: true,
     onDrop: (f) => {
       f.forEach((f) => {
-        const uploadId = upload(f);
+        const u = upload(f);
         ws.send({
           code: MessageCode.Metadata,
-          id: { owner: session.peerId, id: uploadId.id },
+          id: { owner: session.peerId, id: u.id },
           name: f.name,
           size: f.size,
           type: f.type || "application/octet-stream",
@@ -96,7 +95,9 @@ const Tunnel = () => {
               }
             />
           ) : (
-            <button onClick={open}>Drop Files</button>
+            <button data-testid="upload" onClick={open}>
+              Drop Files
+            </button>
           )}
         </div>
       </section>

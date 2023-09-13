@@ -11,7 +11,10 @@ export const JoinPage = () => {
   const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
-    toast("You'll find your secret on the host", { duration: Infinity });
+    toast(
+      <span data-testid="toast-join">You'll find your secret on the host</span>,
+      { duration: Infinity }
+    );
   }, []);
 
   useEffect(() => {
@@ -21,12 +24,9 @@ export const JoinPage = () => {
     sessionStorage.clear();
     setConnecting(true);
 
-    fetch(
-      `http${import.meta.env.PROD ? "s" : ""}://${
-        import.meta.env.PUBLIC_API_HOST
-      }/join?s=${secret}`,
-      { method: "PUT" }
-    )
+    fetch(`//${import.meta.env.PUBLIC_API_HOST}/join?s=${secret}`, {
+      method: "PUT",
+    })
       .finally(() => {
         setConnecting(false);
       })
@@ -86,6 +86,7 @@ export const JoinPage = () => {
         <input
           ref={secretInput}
           name="secret"
+          data-testid="secret"
           className={clsx(
             "w-[9ch]",
             "px-4 pt-6 pb-2",

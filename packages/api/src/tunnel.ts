@@ -199,18 +199,22 @@ export class Tunnel implements DurableObject {
 
     this.downloads.push({ id: { owner, id }, stream });
 
-    return new Response(
-      blob.pipeThrough(new FixedLengthStream(metadata.size)),
-      {
-        status: 200,
-        encodeBody: "manual",
-        headers: {
-          Connection: "close",
-          "Content-Type": metadata.type,
-          "Content-Disposition": `attachment; filename=\"${metadata.name}\"`,
-          "Content-Encoding": "gzip",
-        },
-      }
-    );
+    // TODO: We cannot know the correct content-length of the file because it is
+    // compressed by the uploader. I'd have liked to know this so I can set the
+    // Content-Length header here and have the browser show a download progress
+    // bar, but that doesn't sound possible without buffering the entire file
+    // on the uploader's browser :/
+    // We could have done this to set the Content-Length header:
+    // blob.pipeThrough(new FixedLengthStream(metadata.size))
+    return new Response(blob, {
+      status: 200,
+      encodeBody: "manual",
+      headers: {
+        Connection: "close",
+        "Content-Type": metadata.type,
+        "Content-Disposition": `attachment; filename=\"${metadata.name}\"`,
+        "Content-Encoding": "gzip",
+      },
+    });
   };
 }
