@@ -1,9 +1,12 @@
 name = "blobs-api"
 main = "src/worker.ts"
-compatibility_date = "2023-07-24"
+compatibility_date = "2023-09-05"
 
 [vars]
 environment = 'production'
+
+[[tail_consumers]]
+service = 'ingest-worker'
 
 [[kv_namespaces]]
 binding = "secrets"
@@ -15,6 +18,3 @@ bindings = [{ name = "tunnels", class_name = "Tunnel" }]
 [[migrations]]
 tag = "v0"
 new_classes = ["Tunnel"]
-
-[[tail_consumers]]
-service = 'ingest-worker'
