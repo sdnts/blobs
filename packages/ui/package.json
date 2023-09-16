@@ -7,6 +7,7 @@
     "dev": "astro dev",
     "build": "astro build",
     "test": "playwright test",
+    "deploy": "wrangler pages deploy dist --project-name=blobs",
     "check:types": "tsc"
   },
   "dependencies": {
@@ -30,6 +31,7 @@
     "@types/react-dom": "18.2.7",
     "astro": "3.0.12",
     "tailwindcss": "3.3.3",
-    "typescript": "5.2.2"
+    "typescript": "5.2.2",
+    "wrangler": "3.8.0"
   }
 }

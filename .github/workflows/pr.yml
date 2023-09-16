@@ -77,8 +77,10 @@ jobs:
   deploy:
     name: Deploy
     needs:
+      - types
       - test-api
       - test-protocol
+      - test-ui
     runs-on: ubuntu-latest
     environment: Production
     steps:
@@ -88,6 +90,8 @@ jobs:
           node-version: 18
           cache: "yarn"
       - run: yarn
+      - run: yarn ui build
       - run: yarn api deploy
+      - run: yarn ui deploy
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
