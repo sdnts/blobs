@@ -1,10 +1,10 @@
-import { Context } from "./context";
+import { Env } from "./worker";
 
 export async function sign(
   peerId: string,
   tunnelId: string,
   ip: string,
-  env: Pick<Context["env"], "authSecret">
+  env: Pick<Env, "authSecret">
 ): Promise<string> {
   const te = new TextEncoder();
 
@@ -28,7 +28,7 @@ export async function sign(
 
 export async function verify(
   token: string,
-  env: Pick<Context["env"], "authSecret">
+  env: Pick<Env, "authSecret">
 ): Promise<false | { peerId: string; tunnelId: string; ip: string }> {
   const [peerId, tunnelId, ip] = token.split("|");
   if (peerId !== "1" && peerId !== "2") return false;

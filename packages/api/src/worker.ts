@@ -1,5 +1,4 @@
 import { Router, error } from "itty-router";
-import { Context } from "./context";
 import { TunnelRequest, withAuth, withIp } from "./middleware";
 
 export type Env = {
@@ -7,24 +6,20 @@ export type Env = {
   authSecret: string;
   secrets: KVNamespace;
   tunnels: DurableObjectNamespace;
-  metricsClientId?: string;
-  metricsClientSecret?: string;
 };
 
 export default {
   async fetch(
     request: Request,
     env: Env,
-    ectx: ExecutionContext
+    ctx: ExecutionContext
   ): Promise<Response> {
-    const ctx = new Context(env, ectx.waitUntil);
-
     // I want to do as little as possible in the Worker so I can avoid having
     // routing / app logic in two places.
     // Basically, all we want to do here is figure out the DO ID and move on.
     // We do not even ship any metrics from the Worker.
 
-    return Router<TunnelRequest, [Context]>()
+    return Router<TunnelRequest>()
       .options("*", () => new Response(null))
       .put("/new", (request, ctx) =>
         ctx.env.tunnels.get(ctx.env.tunnels.newUniqueId()).fetch(request)
@@ -58,7 +53,7 @@ export default {
 
         response.headers.set(
           "Access-Control-Allow-Origin",
-          ctx.env.environment === "development" ? "*" : "https://blob.city"
+          env.environment === "development" ? "*" : "https://blob.city"
         );
         response.headers.set("Access-Control-Allow-Methods", "GET,PUT");
 

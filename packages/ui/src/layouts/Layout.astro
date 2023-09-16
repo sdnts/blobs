@@ -113,15 +113,15 @@ import { Toaster } from "sonner";
 
     <!-- Analytics -->
     <script defer>
-      if (window.location.hostname !== "localhost") {
-        fetch("https://in.sdnts.dev/a", {
-          method: "POST",
-          body: JSON.stringify({
-            name: "page_view",
-            path: window.location.pathname,
-          }),
-        });
-      }
+      fetch("https://in.sdnts.dev/a", {
+        method: "POST",
+        body: JSON.stringify({
+          name: "page_view",
+          environment:
+            location.hostname === "localhost" ? "development" : "production",
+          path: location.pathname,
+        }),
+      });
     </script>
   </body>
 </html>

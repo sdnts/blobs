@@ -6,14 +6,7 @@ import {
   serialize,
 } from "@blobs/protocol";
 import { Router, error } from "itty-router";
-import { Context } from "./context";
-import {
-  TunnelRequest,
-  withAuth,
-  withIp,
-  withPath,
-  withRayId,
-} from "./middleware";
+import { TunnelRequest, withAuth, withIp, withRayId } from "./middleware";
 import { WebSocketSource } from "./stream";
 import { Env } from "./worker";
 import { sign } from "./auth";
@@ -30,25 +23,28 @@ export class Tunnel implements DurableObject {
   ) {}
 
   async fetch(request: Request): Promise<Response> {
-    const ctx = new Context(this.env, this.state.waitUntil);
-
-    return Router<TunnelRequest, [Context]>()
-      .all("*", withPath(), withRayId(), withIp())
+    return Router<TunnelRequest>()
+      .all("*", withRayId(), withIp())
+      .all("*", (request) => {
+        console.log(
+          {
+            rayId: request.rayId,
+            tunnelId: request.tunnelId,
+            peerId: request.peerId,
+          },
+          "Incoming tunnel request"
+        );
+      })
       .put("/new", this.New)
       .put("/join", this.Join)
       .get("/tunnel", withAuth(), this.Tunnel)
       .get("/download", withAuth(), this.Download)
       .all("*", () => error(500, "Bad pathname"))
-      .handle(request, ctx)
-      .then((response) => {
-        ctx.tag({ status: response.status });
-        return response;
-      })
+      .handle(request)
       .catch((e) => {
-        ctx.error(`Uncaught error: ${(e as Error).message}`);
+        console.error(`Uncaught error: ${(e as Error).message}`);
         return error(500, `Uncaught error: ${(e as Error).message}`);
-      })
-      .finally(() => ctx.ship());
+      });
   }
 
   async webSocketMessage(_ws: WebSocket, data: string | ArrayBuffer) {
@@ -104,52 +100,50 @@ export class Tunnel implements DurableObject {
 
   // ---
 
-  private New = async (
-    request: TunnelRequest,
-    ctx: Context
-  ): Promise<Response> => {
+  private New = async (request: TunnelRequest): Promise<Response> => {
     // Secret collision is bad, but the only way to avoid it is to have longer
     // nano IDs. With our custom alphabet, there's significant (1%) possibility
     // of collision for a sustained load of 10RPS for an hour.
     // https://zelark.github.io/nano-id-cc/
     // If we ever get to that scale, we'll have to increase the length of the
     // secrets, or switch to a new format.
-    const secret = ctx.env.environment === "development" ? "000000" : nanoid();
+    const secret = this.env.environment === "development" ? "000000" : nanoid();
     const tunnelId = this.state.id.toString();
 
     // Time out this tunnel after a short amount of time. This allows secret
     // reuse (which in turn helps with collisions)
-    await ctx.env.secrets.put(secret, tunnelId, { expirationTtl: 300 }); // 5m
+    await this.env.secrets.put(secret, tunnelId, { expirationTtl: 300 }); // 5m
 
+    console.log({ tunnelId }, "Peer 1 joined");
     return new Response(
       JSON.stringify({
         secret,
-        token: await sign("1", tunnelId, request.ip, ctx.env),
+        token: await sign("1", tunnelId, request.ip, this.env),
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   };
 
-  private Join = async (
-    request: TunnelRequest,
-    ctx: Context
-  ): Promise<Response> => {
+  private Join = async (request: TunnelRequest): Promise<Response> => {
     const secret = request.query["s"];
     if (!secret) return error(400, "Missing secret");
     if (Array.isArray(secret)) return error(400, "Multiple secrets");
 
     // Prevent anyone else from joining. Also helps with secret reuse.
-    await ctx.env.secrets.delete(secret);
+    await this.env.secrets.delete(secret);
 
     const tunnelId = this.state.id.toString();
 
+    console.log({ tunnelId }, "Peer 2 joined");
     return new Response(
-      JSON.stringify({ token: await sign("2", tunnelId, request.ip, ctx.env) }),
+      JSON.stringify({
+        token: await sign("2", tunnelId, request.ip, this.env),
+      }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
   };
 
-  private Tunnel = (request: TunnelRequest, _ctx: Context): Response => {
+  private Tunnel = (request: TunnelRequest): Response => {
     const upgrade = request.headers.get("Upgrade");
     if (!upgrade) return error(400, "Missing Upgrade header");
     if (upgrade !== "websocket") return error(400, "Invalid Upgrade header");
@@ -167,10 +161,7 @@ export class Tunnel implements DurableObject {
     return new Response(null, { status: 101, webSocket: peer[1] });
   };
 
-  private Download = async (
-    request: TunnelRequest,
-    ctx: Context
-  ): Promise<Response> => {
+  private Download = async (request: TunnelRequest): Promise<Response> => {
     const owner = request.query.o;
     if (!owner) return error(400, "Blob owner is required");
     if (Array.isArray(owner)) return error(400, "Multiple blob owners");
@@ -185,11 +176,11 @@ export class Tunnel implements DurableObject {
     );
     if (!metadata) return error(404, "No such blob");
 
-    ctx.tag({ blobId: metadata.id.id, owner });
-
     const source = this.state.getWebSockets(owner);
     if (!source) return error(500, "Unknown peer in metadata");
     if (source.length > 1) return error(500, "Too many sources");
+
+    console.log({ blobId: metadata.id.id, owner }, "Downloading");
 
     const stream = new WebSocketSource(source[0], metadata.id);
     const blob = new ReadableStream<Uint8Array>(stream, {

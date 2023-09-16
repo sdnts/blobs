@@ -15,3 +15,6 @@ bindings = [{ name = "tunnels", class_name = "Tunnel" }]
 [[migrations]]
 tag = "v0"
 new_classes = ["Tunnel"]
+
+[[tail_consumers]]
+service = 'ingest-worker'

@@ -99,7 +99,7 @@ test.describe("Peer 2", () => {
     await expect(peer2.getByText(/Drop files here to stream/)).toBeVisible();
   });
 
-  test.skip("rejects incorrect secrets", async () => { });
+  test.skip("rejects incorrect secrets", async () => {});
 
   test("can transfer a file to peer 1", async ({ page: peer2, context }) => {
     const peer1 = await context.newPage();
@@ -144,4 +144,4 @@ test.describe("Peer 2", () => {
   });
 });
 
-test.skip("can reconnect", async ({ page }) => { });
+test.skip("can reconnect", async ({ page }) => {});
