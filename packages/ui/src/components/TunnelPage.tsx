@@ -47,8 +47,6 @@ const Tunnel = () => {
     []
   );
 
-  console.log(session);
-
   const [uploads, upload] = useStore((s) => [s.uploads, s.upload]);
 
   const ws = useWebSocket(session.token);

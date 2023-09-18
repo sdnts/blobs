@@ -2,6 +2,7 @@ import {
   BlobId,
   BlobMetadata,
   MessageCode,
+  PeerId,
   deserialize,
   serialize,
 } from "@blobs/protocol";
@@ -23,27 +24,27 @@ export class Tunnel implements DurableObject {
   ) {}
 
   async fetch(request: Request): Promise<Response> {
-    return Router<TunnelRequest>()
-      .all("*", withRayId(), withIp())
+    return Router<TunnelRequest, [Env]>()
+      .all("*", withRayId, withIp)
       .all("*", (request) => {
-        console.log(
-          {
-            rayId: request.rayId,
-            tunnelId: request.tunnelId,
-            peerId: request.peerId,
-          },
-          "Incoming tunnel request"
-        );
+        console.info({ rayId: request.rayId }, "Incoming request");
       })
       .put("/new", this.New)
       .put("/join", this.Join)
-      .get("/tunnel", withAuth(), this.Tunnel)
-      .get("/download", withAuth(), this.Download)
+      .get("/tunnel", withAuth, this.Tunnel)
+      .get("/download", withAuth, this.Download)
       .all("*", () => error(500, "Bad pathname"))
-      .handle(request)
+      .handle(request, this.env)
+      .then((r: Response) => {
+        console.info({ status: r.status }, "Outgoing response");
+        return r;
+      })
       .catch((e) => {
-        console.error(`Uncaught error: ${(e as Error).message}`);
-        return error(500, `Uncaught error: ${(e as Error).message}`);
+        console.error(
+          { error: (e as Error).message },
+          "Internal error in Tunnel"
+        );
+        return error(500, "Internal error");
       });
   }
 
@@ -101,6 +102,7 @@ export class Tunnel implements DurableObject {
   // ---
 
   private New = async (request: TunnelRequest): Promise<Response> => {
+    console.log(JSON.stringify(this.env));
     // Secret collision is bad, but the only way to avoid it is to have longer
     // nano IDs. With our custom alphabet, there's significant (1%) possibility
     // of collision for a sustained load of 10RPS for an hour.
@@ -108,17 +110,25 @@ export class Tunnel implements DurableObject {
     // If we ever get to that scale, we'll have to increase the length of the
     // secrets, or switch to a new format.
     const secret = this.env.environment === "development" ? "000000" : nanoid();
-    const tunnelId = this.state.id.toString();
 
     // Time out this tunnel after a short amount of time. This allows secret
     // reuse (which in turn helps with collisions)
-    await this.env.secrets.put(secret, tunnelId, { expirationTtl: 300 }); // 5m
+    await this.env.secrets.put(secret, request.tunnelId, {
+      expirationTtl: 300,
+    }); // 5m
 
-    console.log({ tunnelId }, "Peer 1 joined");
+    const peerId: PeerId = "1";
+
+    console.info({
+      action: "New",
+      rayId: request.rayId,
+      tunnelId: request.tunnelId,
+      peerId,
+    });
     return new Response(
       JSON.stringify({
         secret,
-        token: await sign("1", tunnelId, request.ip, this.env),
+        token: await sign(peerId, request.tunnelId, request.ip, this.env),
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -132,12 +142,17 @@ export class Tunnel implements DurableObject {
     // Prevent anyone else from joining. Also helps with secret reuse.
     await this.env.secrets.delete(secret);
 
-    const tunnelId = this.state.id.toString();
+    const peerId: PeerId = "2";
 
-    console.log({ tunnelId }, "Peer 2 joined");
+    console.info({
+      action: "Join",
+      rayId: request.rayId,
+      tunnelId: request.tunnelId,
+      peerId,
+    });
     return new Response(
       JSON.stringify({
-        token: await sign("2", tunnelId, request.ip, this.env),
+        token: await sign(peerId, request.tunnelId, request.ip, this.env),
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
     );
@@ -158,6 +173,15 @@ export class Tunnel implements DurableObject {
     const peer = new WebSocketPair();
     this.state.acceptWebSocket(peer[0], [request.peerId]);
 
+    console.info(
+      {
+        action: "Tunnel",
+        rayId: request.rayId,
+        tunnelId: request.tunnelId,
+        peerId: request.peerId,
+      },
+      "Tunnel established"
+    );
     return new Response(null, { status: 101, webSocket: peer[1] });
   };
 
@@ -180,8 +204,6 @@ export class Tunnel implements DurableObject {
     if (!source) return error(500, "Unknown peer in metadata");
     if (source.length > 1) return error(500, "Too many sources");
 
-    console.log({ blobId: metadata.id.id, owner }, "Downloading");
-
     const stream = new WebSocketSource(source[0], metadata.id);
     const blob = new ReadableStream<Uint8Array>(stream, {
       highWaterMark: 50 * 1024 * 1024, // 50MiB, essentially how many bytes we'll buffer in memory
@@ -197,6 +219,17 @@ export class Tunnel implements DurableObject {
     // on the uploader's browser :/
     // We could have done this to set the Content-Length header:
     // blob.pipeThrough(new FixedLengthStream(metadata.size))
+
+    console.info(
+      {
+        action: "Download",
+        rayId: request.rayId,
+        tunnelId: request.tunnelId,
+        blobId: metadata.id.id,
+        owner: metadata.id.owner,
+      },
+      "Downloading"
+    );
     return new Response(blob, {
       status: 200,
       encodeBody: "manual",
