@@ -51,64 +51,81 @@ import { ReadableStreamDefaultController } from "@cloudflare/workers-types/exper
  *                      ◀──MessageCode.DataChunkEnd ───
  */
 export class WebSocketSource implements UnderlyingSource {
-  /**
-   * A handle to the WebSocket this source is reading from.
-   */
-  #id: BlobId;
-  #ws: WebSocket;
   controller?: ReadableStreamDefaultController;
   pullPromise?: { resolve: () => void; reject: () => void };
 
-  constructor(ws: WebSocket, id: BlobId) {
-    this.#id = id;
-    this.#ws = ws;
-  }
+  constructor(
+    private ws: WebSocket,
+    public id: BlobId
+  ) {}
 
   pull(controller: ReadableStreamDefaultController): void | Promise<void> {
     // Return early if the stream is full, has errored, or has closed
     // https://developer.mozilla.org/en-US/docs/Web/API/ReadableByteStreamController/desiredSize
-    if (controller.desiredSize === null) return; // Stream has errored
+    if (controller.desiredSize === null) return controller.close(); // Stream has errored
     if (controller.desiredSize < 0) return; // Stream is full
     if (controller.desiredSize === 0) return controller.close(); // Stream is finished
 
-    this.#ws.send(serialize({ code: MessageCode.DataRequest, id: this.#id }));
-    this.controller = controller;
+    if (this.ws.readyState !== WebSocket.READY_STATE_OPEN) return;
 
     // Return a Promise here so that `pull` isn't called again till we've enqueued
-    // a single file chunk (which may arrive in multiple messages because of the
+    // a full file chunk (which may arrive in multiple messages because of the
     // 1MiB DO WS message limit)
     // This is required for proper backpressure control.
     // TODO: Are we utilizing the stream to its full potential here or are we
     // constantly enqueue-ing fewer bytes than we can?
     return new Promise((resolve, reject) => {
+      this.ws.send(serialize({ code: MessageCode.DataRequest, id: this.id }));
+
+      this.controller = controller;
       this.pullPromise = { resolve, reject };
     });
   }
 
   cancel(): void {
-    this.#ws.close();
+    this.ws.close();
+
+    this.controller?.close();
+    this.controller = undefined;
+    this.pullPromise?.reject();
+    this.pullPromise = undefined;
   }
 
-  // ---
+  // Since we're using hibernatable DOs, WebSocket messages get delivered to the
+  // DO instead of the WS instance, so we have to rely on the DO letting us know
+  // when that happens. Practically speaking though, a DO should not hibernate
+  // between multiple pulls of the same WebSocketSource instance, since there
+  // will always be sufficient WS activity (aka the file being downloaded)
 
   webSocketMessage = (message: Message) => {
+    if (!this.controller || !this.pullPromise) return;
+
     if (message.code === MessageCode.DataChunk) {
       if (message.bytes.length === 0) {
-        this.controller?.close();
-        this.pullPromise?.resolve();
+        this.controller.close();
+        this.pullPromise.resolve();
+
+        this.controller = undefined;
+        this.pullPromise = undefined;
         return;
       }
 
-      return this.controller?.enqueue(message.bytes);
+      return this.controller.enqueue(message.bytes);
     }
 
     if (message.code === MessageCode.DataChunkEnd) {
-      return this.pullPromise?.resolve();
+      this.pullPromise.resolve();
+
+      this.controller = undefined;
+      this.pullPromise = undefined;
     }
   };
 
-  onClose() {
-    this.controller?.close();
-    this.pullPromise?.reject();
-  }
+  webSocketClose = () => {
+    if (!this.controller || !this.pullPromise) return;
+
+    this.controller.close();
+    this.pullPromise.reject();
+    this.pullPromise = undefined;
+  };
 }

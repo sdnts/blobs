@@ -102,7 +102,6 @@ export class Tunnel implements DurableObject {
   // ---
 
   private New = async (request: TunnelRequest): Promise<Response> => {
-    console.log(JSON.stringify(this.env));
     // Secret collision is bad, but the only way to avoid it is to have longer
     // nano IDs. With our custom alphabet, there's significant (1%) possibility
     // of collision for a sustained load of 10RPS for an hour.
