@@ -2,18 +2,12 @@ import {
   BlobId,
   BlobMetadata,
   MessageCode,
-  PeerId,
   deserialize,
   serialize,
 } from "@blobs/protocol";
-import { Router, error } from "itty-router";
-import { TunnelRequest, withAuth, withIp, withRayId } from "./middleware";
+import { IRequestStrict, Router, error } from "itty-router";
 import { WebSocketSource } from "./stream";
 import { Env } from "./worker";
-import { sign } from "./auth";
-import { customAlphabet } from "nanoid";
-
-const nanoid = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 6);
 
 export class Tunnel implements DurableObject {
   private downloads: Array<{ id: BlobId; stream: WebSocketSource }> = [];
@@ -24,27 +18,16 @@ export class Tunnel implements DurableObject {
   ) {}
 
   async fetch(request: Request): Promise<Response> {
-    return Router<TunnelRequest, [Env]>()
-      .all("*", withRayId, withIp)
-      .all("*", (request) => {
-        console.info({ rayId: request.rayId }, "Incoming request");
-      })
-      .put("/new", this.New)
-      .put("/join", this.Join)
-      .get("/tunnel", withAuth, this.Tunnel)
-      .get("/download", withAuth, this.Download)
-      .all("*", () => error(500, "Bad pathname"))
+    return Router()
+      .get("/tunnel", this.Tunnel)
+      .get("/download", this.Download)
       .handle(request, this.env)
-      .then((r: Response) => {
-        console.info({ status: r.status }, "Outgoing response");
-        return r;
-      })
       .catch((e) => {
         console.error(
           { error: (e as Error).message },
           "Internal error in Tunnel"
         );
-        return error(500, "Internal error");
+        return error(500);
       });
   }
 
@@ -101,68 +84,25 @@ export class Tunnel implements DurableObject {
 
   // ---
 
-  private New = async (request: TunnelRequest): Promise<Response> => {
-    // Secret collision is bad, but the only way to avoid it is to have longer
-    // nano IDs. With our custom alphabet, there's significant (1%) possibility
-    // of collision for a sustained load of 10RPS for an hour.
-    // https://zelark.github.io/nano-id-cc/
-    // If we ever get to that scale, we'll have to increase the length of the
-    // secrets, or switch to a new format.
-    const secret = this.env.environment === "development" ? "000000" : nanoid();
+  private Tunnel = (request: IRequestStrict): Response => {
+    const tunnelId = this.state.id.toString();
+    const peerId = request.headers.get("x-peer-id");
+    const rayId = request.headers.get("x-ray-id");
+    if (!peerId || !rayId) {
+      console.error(
+        { rayId, peerId },
+        "Missing internal headers in DO request"
+      );
+      return error(500, "Internal error");
+    }
 
-    // Time out this tunnel after a short amount of time. This allows secret
-    // reuse (which in turn helps with collisions)
-    await this.env.secrets.put(secret, request.tunnelId, {
-      expirationTtl: 300,
-    }); // 5m
-
-    const peerId: PeerId = "1";
-
-    console.info({
-      action: "New",
-      rayId: request.rayId,
-      tunnelId: request.tunnelId,
-      peerId,
-    });
-    return new Response(
-      JSON.stringify({
-        secret,
-        token: await sign(peerId, request.tunnelId, request.ip, this.env),
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
-  };
-
-  private Join = async (request: TunnelRequest): Promise<Response> => {
-    const secret = request.query["s"];
-    if (!secret) return error(400, "Missing secret");
-    if (Array.isArray(secret)) return error(400, "Multiple secrets");
-
-    // Prevent anyone else from joining. Also helps with secret reuse.
-    await this.env.secrets.delete(secret);
-
-    const peerId: PeerId = "2";
-
-    console.info({
-      action: "Join",
-      rayId: request.rayId,
-      tunnelId: request.tunnelId,
-      peerId,
-    });
-    return new Response(
-      JSON.stringify({
-        token: await sign(peerId, request.tunnelId, request.ip, this.env),
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
-  };
-
-  private Tunnel = (request: TunnelRequest): Response => {
     const upgrade = request.headers.get("Upgrade");
     if (!upgrade) return error(400, "Missing Upgrade header");
     if (upgrade !== "websocket") return error(400, "Invalid Upgrade header");
 
-    const peers = this.state.getWebSockets();
+    const peers = this.state
+      .getWebSockets()
+      .filter((w) => w.readyState === WebSocket.READY_STATE_OPEN);
     if (peers.length >= 2) return error(403, "Tunnel is full");
 
     peers.forEach((ws) =>
@@ -170,21 +110,27 @@ export class Tunnel implements DurableObject {
     );
 
     const peer = new WebSocketPair();
-    this.state.acceptWebSocket(peer[0], [request.peerId]);
+    this.state.acceptWebSocket(peer[0], [peerId]);
 
     console.info(
-      {
-        action: "Tunnel",
-        rayId: request.rayId,
-        tunnelId: request.tunnelId,
-        peerId: request.peerId,
-      },
-      "Tunnel established"
+      { action: "Tunnel", rayId, tunnelId, peerId },
+      "Tunnel connection established"
     );
     return new Response(null, { status: 101, webSocket: peer[1] });
   };
 
-  private Download = async (request: TunnelRequest): Promise<Response> => {
+  private Download = async (request: IRequestStrict): Promise<Response> => {
+    const tunnelId = this.state.id.toString();
+    const peerId = request.headers.get("x-peer-id");
+    const rayId = request.headers.get("x-ray-id");
+    if (!peerId || !rayId) {
+      console.error(
+        { rayId, peerId },
+        "Missing internal headers in DO request"
+      );
+      return error(500, "Internal error");
+    }
+
     const owner = request.query.o;
     if (!owner) return error(400, "Blob owner is required");
     if (Array.isArray(owner)) return error(400, "Multiple blob owners");
@@ -199,7 +145,9 @@ export class Tunnel implements DurableObject {
     );
     if (!metadata) return error(404, "No such blob");
 
-    const source = this.state.getWebSockets(owner);
+    const source = this.state
+      .getWebSockets(owner)
+      .filter((w) => w.readyState === WebSocket.READY_STATE_OPEN);
     if (!source) return error(500, "Unknown peer in metadata");
     if (source.length > 1) return error(500, "Too many sources");
 
@@ -222,8 +170,9 @@ export class Tunnel implements DurableObject {
     console.info(
       {
         action: "Download",
-        rayId: request.rayId,
-        tunnelId: request.tunnelId,
+        rayId,
+        tunnelId,
+        peerId,
         blobId: metadata.id.id,
         owner: metadata.id.owner,
       },

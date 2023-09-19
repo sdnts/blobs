@@ -1,31 +1,22 @@
-import { afterAll, beforeAll, beforeEach, expect, test } from "vitest";
-import { UnstableDevWorker, setup, teardown } from "./setup";
+import { expect } from "vitest";
+import { test } from "./setup";
 
-let worker: UnstableDevWorker;
-beforeAll(async () => {
-  worker = await setup();
-});
-afterAll(() => teardown(worker));
+test("can join existing tunnels", async ({ worker }) => {
+    let res = await worker.fetch("/new", { method: "PUT" });
+    let body = (await res.json()) as Record<string, string>;
+    const secret = body.secret;
 
-let secret: string;
-beforeEach(async () => {
-  const res = await worker.fetch("/new", { method: "PUT" });
-  const body = (await res.json()) as Record<string, string>;
-  secret = body.secret;
-});
+    res = await worker.fetch(`/join?s=${secret}`, { method: "PUT" });
+    expect(res.status).toBe(200);
 
-test("can join existing tunnels", async () => {
-  const res = await worker.fetch(`/join?s=${secret}`, { method: "PUT" });
-  expect(res.status).toBe(200);
+    body = (await res.json()) as Record<string, string>;
 
-  const body = (await res.json()) as Record<string, string>;
+    expect(body.secret).toBeUndefined();
 
-  expect(body.secret).toBeUndefined();
-
-  expect(body.token).not.toBeUndefined();
-  const [peerId, actorId, ip, signature] = body.token.split("|");
-  expect(peerId).not.toBeUndefined();
-  expect(actorId).not.toBeUndefined();
-  expect(ip).not.toBeUndefined();
-  expect(signature).not.toBeUndefined();
+    expect(body.token).not.toBeUndefined();
+    const [peerId, actorId, ip, signature] = body.token.split("|");
+    expect(peerId).not.toBeUndefined();
+    expect(actorId).not.toBeUndefined();
+    expect(ip).not.toBeUndefined();
+    expect(signature).not.toBeUndefined();
 });

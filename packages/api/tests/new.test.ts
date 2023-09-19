@@ -1,13 +1,7 @@
-import { afterAll, beforeAll, expect, test } from "vitest";
-import { UnstableDevWorker, setup, teardown } from "./setup";
+import { expect } from "vitest";
+import { test } from "./setup";
 
-let worker: UnstableDevWorker;
-beforeAll(async () => {
-  worker = await setup();
-});
-afterAll(() => teardown(worker));
-
-test("can create new tunnels", async () => {
+test("can create new tunnels", async ({ worker }) => {
   const res = await worker.fetch("/new", { method: "PUT" });
   expect(res.status).toBe(200);
 
