@@ -1,61 +1,40 @@
-import { pack } from "msgpackr/pack";
-import { unpack } from "msgpackr/unpack";
 import { Err, Ok, Result } from "ts-results";
 
-export type PeerId = "1" | "2";
-export type BlobId = { owner: PeerId; id: string };
-export type BlobMetadata = {
-  id: BlobId;
-  name: string; // File name of the blob
-  size: number; // Size of the blob
-  type: string; // MIME type of the blob
-};
+export enum SessionMessageCode {
+  Keepalive = 1,
 
-export enum MessageCode {
-  PeerConnected = 1,
+  PeerConnected = 10,
   PeerDisconnected,
 
-  Metadata = 11,
+  TunnelCreate = 100,
+  TunnelCreated,
+  TunnelReady,
+}
+export type SessionMessage =
+  | { code: SessionMessageCode.Keepalive }
+  | { code: SessionMessageCode.PeerConnected }
+  | { code: SessionMessageCode.PeerDisconnected }
+  | { code: SessionMessageCode.TunnelCreate }
+  | { code: SessionMessageCode.TunnelCreated; tunnelId: string }
+  | {
+    code: SessionMessageCode.TunnelReady;
+    tunnelId: string;
+    name: string; // File name of the blob
+    size: number; // Size of the blob
+    type: string; // MIME type of the blob
+  };
 
-  DataRequest = 101,
-  DataChunk,
-  DataChunkEnd,
-
-  Keepalive = 255,
+export function serializeSessionMessage(message: SessionMessage): string {
+  // Must use string messages here because hibernatable Durable Objects only
+  // support string auto-responses currently
+  return JSON.stringify(message);
 }
 
-export type Message =
-  | { code: MessageCode.PeerConnected }
-  | { code: MessageCode.PeerDisconnected }
-  | ({ code: MessageCode.Metadata } & BlobMetadata)
-  | {
-      code: MessageCode.DataRequest; // Announces that a blob is being requested to download
-      id: BlobId;
-    }
-  | {
-      code: MessageCode.DataChunk; // Indicates a single chunk of a blob
-      id: BlobId;
-      offset: number; // Byte-offset of this blob chunk
-      bytes: Uint8Array; // Raw chunk bytes
-    }
-  | {
-      code: MessageCode.DataChunkEnd; // Marks the blob's chunk boundary
-      id: BlobId;
-    }
-  | { code: MessageCode.Keepalive };
-
-export function serialize(message: Message): Uint8Array {
-  return new Uint8Array(pack(message));
-}
-
-export function deserialize(
-  message: ArrayBuffer | Uint8Array
-): Result<Message, string> {
-  const buffer =
-    message instanceof ArrayBuffer ? new Uint8Array(message) : message;
-
+export function deserializeSessionMessage(
+  message: string
+): Result<SessionMessage, string> {
   try {
-    return Ok(unpack(buffer));
+    return Ok(JSON.parse(message));
   } catch (e) {
     return Err(`Deserialization error: ${(e as Error).message}`);
   }

@@ -6,8 +6,10 @@
   ],
   "scripts": {
     "api": "yarn workspace @blobs/api",
+    "e2e": "yarn workspace @blobs/e2e",
     "protocol": "yarn workspace @blobs/protocol",
     "ui": "yarn workspace @blobs/ui",
+    "test": "yarn e2e test",
     "format": "prettier -w . --ignore-path .gitignore",
     "check:format": "prettier -c . --ignore-path .gitignore"
   },

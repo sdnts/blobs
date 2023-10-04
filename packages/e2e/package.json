@@ -1,0 +1,14 @@
+{
+  "name": "@blobs/e2e",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "playwright test",
+    "check:types": "tsc"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.38.1",
+    "typescript": "5.2.2"
+  }
+}

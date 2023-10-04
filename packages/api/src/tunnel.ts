@@ -1,192 +1,192 @@
-import {
-  BlobId,
-  BlobMetadata,
-  MessageCode,
-  deserialize,
-  serialize,
-} from "@blobs/protocol";
-import { IRequestStrict, Router, error } from "itty-router";
-import { WebSocketSource } from "./stream";
-import { Env } from "./worker";
+import { error } from "itty-router";
 
 export class Tunnel implements DurableObject {
-  private downloads: Array<{ id: BlobId; stream: WebSocketSource }> = [];
+  private createdAt = Date.now();
+  private uploader: WebSocket | null = null;
 
-  constructor(
-    private state: DurableObjectState,
-    private env: Env
-  ) {}
+  constructor(private state: DurableObjectState) { }
 
   async fetch(request: Request): Promise<Response> {
-    return Router()
-      .get("/tunnel", this.Tunnel)
-      .get("/download", this.Download)
-      .handle(request, this.env)
-      .catch((e) => {
-        console.error(
-          { error: (e as Error).message },
-          "Internal error in Tunnel"
-        );
-        return error(500);
-      });
-  }
+    const url = new URL(request.url);
 
-  async webSocketMessage(_ws: WebSocket, data: string | ArrayBuffer) {
-    if (!(data instanceof ArrayBuffer)) return;
-
-    const message = deserialize(data);
-    if (message.err) return;
-
-    if (message.val.code === MessageCode.Metadata) {
-      await this.state.storage.put<BlobMetadata>(
-        `blob:${message.val.id.owner}:${message.val.id.id}`,
-        message.val
-      );
-
-      // Relay metadata to the _other_ websocket
-      return this.state
-        .getWebSockets(message.val.id.owner === "1" ? "2" : "1")
-        .forEach((ws) => ws.send(serialize(message.val)));
-    }
-
-    if (
-      message.val.code !== MessageCode.DataChunk &&
-      message.val.code !== MessageCode.DataChunkEnd
-    ) {
-      return;
-    }
-
-    const blobId = message.val.id;
-    const downloadIdx = this.downloads.findIndex(
-      (d) => d.id.owner === blobId.owner && d.id.id === blobId.id
-    );
-    if (downloadIdx === -1) return;
-
-    this.downloads[downloadIdx].stream.webSocketMessage(message.val);
-
-    if (
-      message.val.code === MessageCode.DataChunk &&
-      message.val.bytes.byteLength === 0
-    ) {
-      // This download has finished, get rid of it
-      this.downloads.splice(downloadIdx, 1);
-    }
-  }
-
-  webSocketClose() {
-    const peers = this.state.getWebSockets();
-    peers.forEach((ws) =>
-      ws.send(serialize({ code: MessageCode.PeerDisconnected }))
-    );
-
-    if (peers.length === 0) void this.state.storage.deleteAll();
-  }
-
-  // ---
-
-  private Tunnel = (request: IRequestStrict): Response => {
     const tunnelId = this.state.id.toString();
-    const peerId = request.headers.get("x-peer-id");
-    const rayId = request.headers.get("x-ray-id");
-    if (!peerId || !rayId) {
+    const sessionId = request.headers.get("x-session-id");
+    if (!sessionId) {
       console.error(
-        { rayId, peerId },
-        "Missing internal headers in DO request"
+        { sessionId },
+        "Missing internal headers in Tunnel DO request"
       );
       return error(500, "Internal error");
     }
 
-    const upgrade = request.headers.get("Upgrade");
-    if (!upgrade) return error(400, "Missing Upgrade header");
-    if (upgrade !== "websocket") return error(400, "Invalid Upgrade header");
+    if (!this.uploader) {
+      const upgrade = request.headers.get("Upgrade");
+      if (!upgrade) return error(400, "Missing Upgrade header");
+      if (upgrade !== "websocket") return error(400, "Invalid Upgrade header");
 
-    const peers = this.state
-      .getWebSockets()
-      .filter((w) => w.readyState === WebSocket.READY_STATE_OPEN);
-    if (peers.length >= 2) return error(403, "Tunnel is full");
+      const peer = new WebSocketPair();
+      this.uploader = peer[0];
 
-    peers.forEach((ws) =>
-      ws.send(serialize({ code: MessageCode.PeerConnected }))
-    );
-
-    const peer = new WebSocketPair();
-    this.state.acceptWebSocket(peer[0], [peerId]);
-
-    console.info(
-      { action: "Tunnel", rayId, tunnelId, peerId },
-      "Tunnel connection established"
-    );
-    return new Response(null, { status: 101, webSocket: peer[1] });
-  };
-
-  private Download = async (request: IRequestStrict): Promise<Response> => {
-    const tunnelId = this.state.id.toString();
-    const peerId = request.headers.get("x-peer-id");
-    const rayId = request.headers.get("x-ray-id");
-    if (!peerId || !rayId) {
-      console.error(
-        { rayId, peerId },
-        "Missing internal headers in DO request"
+      this.uploader.addEventListener(
+        "close",
+        () => {
+          console.error(
+            { action: "Tunnel", sessionId, tunnelId },
+            "Tunnel broken (closed by uploader)"
+          );
+          this.uploader = null;
+        },
+        { once: true }
       );
-      return error(500, "Internal error");
+      this.uploader.addEventListener(
+        "error",
+        () => {
+          console.error(
+            { action: "Tunnel", sessionId, tunnelId },
+            "Tunnel broken (unknown)"
+          );
+          this.uploader = null;
+        },
+        { once: true }
+      );
+
+      this.uploader.accept();
+      console.info(
+        { action: "Tunnel", sessionId, tunnelId },
+        "Uploader connected"
+      );
+      return new Response(null, { status: 101, webSocket: peer[1] });
     }
 
-    const owner = request.query.o;
-    if (!owner) return error(400, "Blob owner is required");
-    if (Array.isArray(owner)) return error(400, "Multiple blob owners");
-    if (owner !== "1" && owner !== "2") return error(400, "Invalid blob owner");
-
-    const id = request.query.i;
-    if (!id) return error(400, "Blob ID is required");
-    if (Array.isArray(id)) return error(400, "Multiple blob IDs");
-
-    const metadata = await this.state.storage.get<BlobMetadata>(
-      `blob:${owner}:${id}`
-    );
-    if (!metadata) return error(404, "No such blob");
-
-    const source = this.state
-      .getWebSockets(owner)
-      .filter((w) => w.readyState === WebSocket.READY_STATE_OPEN);
-    if (!source) return error(500, "Unknown peer in metadata");
-    if (source.length > 1) return error(500, "Too many sources");
-
-    const stream = new WebSocketSource(source[0], metadata.id);
-    const blob = new ReadableStream<Uint8Array>(stream, {
-      highWaterMark: 50 * 1024 * 1024, // 50MiB, essentially how many bytes we'll buffer in memory
-      size: (chunk) => chunk.byteLength,
-    });
-
-    this.downloads.push({ id: { owner, id }, stream });
-
-    // TODO: We cannot know the correct content-length of the file because it is
-    // compressed by the uploader. I'd have liked to know this so I can set the
-    // Content-Length header here and have the browser show a download progress
-    // bar, but that doesn't sound possible without buffering the entire file
-    // on the uploader's browser :/
-    // We could have done this to set the Content-Length header:
-    // blob.pipeThrough(new FixedLengthStream(metadata.size))
-
     console.info(
+      { action: "Tunnel", sessionId, tunnelId },
+      "Beginning download"
+    );
+
+    const createdAt = this.createdAt;
+    const uploader = this.uploader;
+    uploader.addEventListener("close", (e) => stream.cancel(), { once: true });
+
+    const stream = new ReadableStream<Uint8Array>(
+      /* A ReadableStream source that reads a single file over a WebSocket connection.
+       *
+       * Think of this source as creating a stream pipe over a WebSocket connection.
+       * When pulled, this source requests a single chunk of a file over the WebSocket.
+       * The client then advances its own ReadableStream over the file in question,
+       * reading and returning a single chunk. This byte chunk is instantly enqueued
+       * to the stream.
+       * The backpressure mechanism is very simple as well, if the source stops pulling,
+       * we stop sending WebSocket messages, and the client stops reading more of the
+       * file.
+       *
+       * There are lots of opportunities for improvements here:
+       * 1. In the future, it might be useful to build in a retry mechanism, but that
+       *    can only work for the last transmitted chunk. That may be enough though.
+       * 2. It'll also be nice to deal with WebSocket reconnects. Currently, encountering
+       *    a `close` event just cancels the stream.
+       * 3. An UnderlyingByteSource might be more efficient here to do zero-copy
+       *    transfers. This is a low-hanging fruit I think.
+       *
+       * So why did we write our own UnderlyingSource instead of creating a real stream
+       * pipe from the sender's FileReader to the receiver's Response?
+       * Cloudflare has limits on request body sizes (300 MiB). With a real stream pipe,
+       * we'd be limited to transferring files under that size as well.
+       * We hack around this by transporting raw file chunks over a WebSocket. That has
+       * its own problem though. Durable Object WebSocket messages have a 1MiB size limit
+       * as well (but there can be as many of them as we want). Our client takes care
+       * of this by making sure it only sends us 1MiB parts of a single file chunk at
+       * a time.
+       */
+
       {
-        action: "Download",
-        rayId,
-        tunnelId,
-        peerId,
-        blobId: metadata.id.id,
-        owner: metadata.id.owner,
+        pull(controller) {
+          // Return early if the stream is full, has errored, or has closed
+          // https://developer.mozilla.org/en-US/docs/Web/API/ReadableByteStreamController/desiredSize
+          if (controller.desiredSize === null) return controller.close(); // Stream has errored
+          if (controller.desiredSize < 0) return; // Stream is full
+          if (controller.desiredSize === 0) return controller.close(); // Stream is finished
+
+          // It's going to make things a lot easier if we only pull one chunk at
+          // a time (remember that one chunk is actually made up of multiple 1MiB
+          // blocks because of DO WebSocket message limits), because we won't have
+          // to deal with block ordering issues. In the future, it should be
+          // possible to multiplex blocks from a bunch of chunks to speed up transfers,
+          // but it isn't trivial, and I'd rather have _something_ working.
+          // Returning a Promise here is how we signal to the ReadableStream to
+          // only have one running `pull`
+          return new Promise((resolve, reject) => {
+            const listener = new AbortController();
+            uploader.addEventListener(
+              "close",
+              () => {
+                console.info(
+                  { sessionId, tunnelId, duration: Date.now() - createdAt },
+                  "Blob transfer complete"
+                );
+                controller.close();
+                listener.abort();
+              },
+              { signal: listener.signal }
+            );
+
+            uploader.addEventListener(
+              "message",
+              (e) => {
+                if (typeof e.data === "string") {
+                  listener.abort();
+                  return reject(1003);
+                }
+
+                if (e.data.byteLength === 0) {
+                  // Chunk boundary, we can tell the ReadableStream to request
+                  // the next chunk now
+                  listener.abort();
+                  return resolve();
+                }
+
+                // console.debug("Enqueueing", e.data.byteLength);
+                controller.enqueue(new Uint8Array(e.data));
+              },
+              { signal: listener.signal }
+            );
+
+            // Request a chunk
+            uploader.send("");
+          });
+        },
+        cancel(reason) {
+          return uploader.close(reason ?? 1001);
+        },
       },
-      "Downloading"
+      {
+        // highWaterMark: 50 * 1024 * 1024, // 50MiB, essentially how many bytes we'll buffer in memory
+        highWaterMark: 10, // Queue upto 10 chunks if the downloader is being slow
+        size: (chunk) => chunk.byteLength,
+      }
     );
-    return new Response(blob, {
+
+    const filename = url.searchParams.get("n");
+    const size = url.searchParams.get("s");
+    const type = url.searchParams.get("ct");
+
+    if (!filename || !size || !type) {
+      console.trace(
+        { sessionId, tunnelId, filename, size, type },
+        "Missing request params"
+      );
+      return error(400, "Bad request params");
+    }
+
+    return new Response(stream, {
       status: 200,
       encodeBody: "manual",
       headers: {
         Connection: "close",
-        "Content-Type": metadata.type,
-        "Content-Disposition": `attachment; filename=\"${metadata.name}\"`,
+        "Content-Type": type,
+        "Content-Length": size, // Technically always incorrect because of gzip, but Chromium treats this as a hint to show a real progress bar
+        "Content-Disposition": `attachment; filename=\"${filename}\"`,
         "Content-Encoding": "gzip",
       },
     });
-  };
+  }
 }

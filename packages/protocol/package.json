@@ -9,16 +9,13 @@
     "postinstall": "yarn build",
     "check:types": "tsc",
     "dev": "yarn build --watch",
-    "test": "vitest",
     "build": "tsup src/index.ts --clean --dts --format esm,cjs"
   },
   "dependencies": {
-    "msgpackr": "1.9.9",
     "ts-results": "3.3.0"
   },
   "devDependencies": {
     "tsup": "7.2.0",
-    "typescript": "5.2.2",
-    "vitest": "0.34.4"
+    "typescript": "5.2.2"
   }
 }

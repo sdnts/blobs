@@ -2,64 +2,36 @@ import clsx from "clsx";
 import { animate, timeline } from "motion";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { navigate } from "../store";
+import { useStore } from "../store";
+import { navigate } from "astro:transitions/client";
 
 export const JoinPage = () => {
+  const join = useStore((s) => s.join);
   const [secret, setSecret] = useState("");
   const secretInput = useRef<HTMLInputElement>(null);
 
   const [connecting, setConnecting] = useState(false);
 
   useEffect(() => {
-    toast(
+    const t = toast(
       <span data-testid="toast-join">You'll find your secret on the host</span>,
       { duration: Infinity }
     );
+
+    return () => {
+      toast.dismiss(t);
+    };
   }, []);
 
   useEffect(() => {
     if (secret === null || secret.length !== 6) return;
 
-    const t = toast.loading("Joining tunnel");
-    sessionStorage.clear();
     setConnecting(true);
-
-    fetch(`//${import.meta.env.PUBLIC_API_HOST}/join?s=${secret}`, {
-      method: "PUT",
-    })
-      .finally(() => {
-        setConnecting(false);
-      })
-      .then((res) => {
-        if (res.status === 200) return res.json();
-        return Promise.reject();
-      })
-      .then((res: { token: string }) => {
-        if (!res.token) throw new Error("Malformed API response");
-
-        toast.dismiss();
-        sessionStorage.setItem("token", res.token);
-        sessionStorage.setItem("peerId", "2");
-
-        navigate("/tunnel");
-      })
+    join(secret)
+      .then(() => navigate("/tunnel"))
       .catch(() => {
-        toast.error("Could not join tunnel, please try again in a bit!", {
-          id: t,
-          duration: 10_000,
-          description: (
-            <a
-              href="https://github.com/sdnts/blobs/issues/new"
-              className="underline"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Report an issue
-            </a>
-          ),
-        });
+        setConnecting(false);
 
-        secretInput.current?.focus();
         animate(secretInput.current!, { outlineColor: "#F52F2F" });
         timeline(
           [
@@ -75,7 +47,7 @@ export const JoinPage = () => {
             ],
           ],
           { repeat: 2 }
-        );
+        ).finished.then(() => secretInput.current?.focus());
       });
   }, [secret]);
 

@@ -14,7 +14,10 @@ id = "9c05b646c17b4bc19b1ba41e9bf55cc0"
 preview_id = "9c05b646c17b4bc19b1ba41e9bf55cc0"
 
 [durable_objects]
-bindings = [{ name = "tunnels", class_name = "Tunnel" }]
+bindings = [
+  { name = "sessions", class_name = "Session" },
+  { name = "tunnels", class_name = "Tunnel" },
+]
 [[migrations]]
 tag = "v0"
-new_classes = ["Tunnel"]
+new_classes = ["Session", "Tunnel"]

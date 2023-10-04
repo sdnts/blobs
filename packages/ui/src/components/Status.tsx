@@ -1,19 +1,31 @@
 import clsx from "clsx";
 import { animate, timeline } from "motion";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "../store";
+import ReconnectingWebSocket from "partysocket/ws";
+
+type State = "waiting" | "ready" | "reconnecting";
 
 export const Status = () => {
-  const state = useStore((s) => s.state);
+  const session = useStore((s) => s.session);
+  const [state, setState] = useState<State>("waiting");
+
+  useEffect(() => {
+    if (location.pathname === "/tunnel") return setState("ready");
+    if (!session) return setState("waiting");
+    console.log(session.readyState, ReconnectingWebSocket.OPEN);
+    if (session.readyState === ReconnectingWebSocket.OPEN)
+      return setState("ready");
+    return setState("reconnecting");
+  }, [session, session?.readyState]);
 
   useEffect(() => {
     animate(
       "#status",
       {
         fill: clsx({
-          "#FFA800": state === "waiting",
+          "#FFA800": state === "waiting" || state === "reconnecting",
           "#8AD22E": state === "ready",
-          "#F52F2F": state === "disconnected" || state === "fatal",
         }),
       },
       { duration: 0.1 }
@@ -39,7 +51,7 @@ export const Status = () => {
       >
         {state === "waiting" && "Waiting"}
         {state === "ready" && "Ready"}
-        {state === "disconnected" && "Disconnected"}
+        {state === "reconnecting" && "Reconnecting"}
       </span>
     </p>
   );

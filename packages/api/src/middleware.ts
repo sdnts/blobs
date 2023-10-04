@@ -9,7 +9,7 @@ type Middleware = (
   ip: string
 ) => void | Response | Promise<void | Response>;
 
-export const withTunnel: Middleware = async (request, env, rayId, ip) => {
+export const withSession: Middleware = async (request, env, rayId, ip) => {
   const token = request.query.t;
   if (!token) return error(403, { error: "Missing auth token" });
   if (Array.isArray(token))
@@ -18,15 +18,15 @@ export const withTunnel: Middleware = async (request, env, rayId, ip) => {
   const auth = await verify(token, env);
   if (auth === false) return error(403, { error: "Invalid auth token" });
 
-  const { peerId, tunnelId, ip: lockedIp } = auth;
+  const { sessionId, ip: lockedIp } = auth;
 
-  if (!tunnelId) return error(403, { error: "Malformed auth token" });
+  if (!sessionId) return error(403, { error: "Malformed auth token" });
   if (ip !== lockedIp) return error(403, "Unauthorized IP");
 
-  return env.tunnels.get(env.tunnels.idFromString(tunnelId)).fetch(request, {
-    headers: {
-      "x-peer-id": peerId,
-      "x-ray-id": rayId,
-    },
-  });
+  const headers = new Headers(request.headers);
+  headers.set("x-ray-id", rayId);
+
+  return env.sessions
+    .get(env.sessions.idFromString(sessionId))
+    .fetch(request, { headers });
 };

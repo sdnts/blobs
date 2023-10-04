@@ -1,8 +1,7 @@
 import { Env } from "./worker";
 
 export async function sign(
-  peerId: string,
-  tunnelId: string,
+  sessionId: string,
   ip: string,
   env: Pick<Env, "authSecret">
 ): Promise<string> {
@@ -16,7 +15,7 @@ export async function sign(
     ["sign"]
   );
 
-  const token = `${peerId}|${tunnelId}|${ip}`;
+  const token = `${sessionId}|${ip}`;
   const signature = await crypto.subtle.sign("HMAC", key, te.encode(token));
 
   return (
@@ -26,16 +25,16 @@ export async function sign(
   );
 }
 
+type Session = { sessionId: string; ip: string };
 export async function verify(
   token: string,
   env: Pick<Env, "authSecret">
-): Promise<false | { peerId: string; tunnelId: string; ip: string }> {
-  const [peerId, tunnelId, ip] = token.split("|");
-  if (peerId !== "1" && peerId !== "2") return false;
+): Promise<false | Session> {
+  const [sessionId, ip] = token.split("|");
   if (!ip) return false;
-  if (!tunnelId) return false;
+  if (!sessionId) return false;
 
-  const signedToken = await sign(peerId, tunnelId, ip, env);
-  if (signedToken === token) return { peerId, tunnelId, ip };
+  const signedToken = await sign(sessionId, ip, env);
+  if (signedToken === token) return { sessionId, ip };
   return false;
 }

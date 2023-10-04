@@ -1,62 +1,19 @@
 import clsx from "clsx";
-import { Fragment, Suspense, useEffect } from "react";
-import { suspend } from "suspend-react";
-import { useWebSocket } from "../hooks/useWebSocket";
-import { navigate, useStore } from "../store";
-import { ErrorBoundary } from "./ErrorBoundary";
-import { toast } from "sonner";
+import { useEffect } from "react";
+import { useStore } from "../store";
+import { navigate } from "astro:transitions/client";
 
 export const NewPage = () => {
-  return (
-    <ErrorBoundary>
-      <Suspense fallback={<Fragment />}>
-        <New />
-      </Suspense>
-    </ErrorBoundary>
-  );
-};
-
-type Session = {
-  token: string;
-  secret: string;
-};
-
-const New = () => {
-  const session = suspend(
-    () =>
-      new Promise<Session>((resolve, reject) => {
-        const secret = sessionStorage.getItem("secret");
-        const token = sessionStorage.getItem("token");
-
-        if (!secret || !token) return reject();
-
-        return resolve({ token, secret });
-      }),
-    []
-  );
-
-  const state = useStore((s) => s.state);
-
-  useWebSocket(session.token);
+  const { secret, restore, wait } = useStore((s) => ({
+    secret: s.secret,
+    restore: s.restore,
+    wait: s.wait,
+  }));
 
   useEffect(() => {
-    toast.success("Tunnel created", {
-      duration: Infinity,
-      description: (
-        <span data-testid="toast-success">
-          Use the secret <strong>{session.secret}</strong> to join this tunnel
-        </span>
-      ),
-    });
+    restore();
+    wait().then(() => navigate("/tunnel"));
   }, []);
-
-  useEffect(() => {
-    if (state === "ready") {
-      sessionStorage.removeItem("secret");
-      toast.dismiss();
-      navigate("/tunnel");
-    }
-  }, [state]);
 
   return (
     <main className="flex-1 flex flex-col items-center">
@@ -71,7 +28,7 @@ const New = () => {
           data-testid="secret"
           className="font-bold text-9xl tracking-widest"
         >
-          {session.secret}
+          {secret}
         </span>
       </section>
     </main>

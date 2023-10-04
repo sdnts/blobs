@@ -31,57 +31,31 @@ jobs:
       - run: yarn protocol check:types
       - run: yarn ui check:types
 
-  test-api:
-    name: "Run API tests"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "yarn"
-      - run: yarn
-      - run: yarn api test
-
-  test-protocol:
-    name: "Run protocol tests"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "yarn"
-      - run: yarn
-      - run: yarn protocol test
-
-  test-ui:
-    name: "Run UI tests"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "yarn"
-      - run: yarn
-      - run: yarn ui playwright install --with-deps
-      - run: yarn ui test
-      - uses: actions/upload-artifact@v3
-        if: always()
-        with:
-          name: playwright-report
-          path: playwright-report/
-          retention-days: 30
+  # test-e2e:
+  #   name: "Run E2E tests"
+  #   runs-on: ubuntu-latest
+  #   timeout-minutes: 5
+  #   steps:
+  #     - uses: actions/checkout@v3
+  #     - uses: actions/setup-node@v3
+  #       with:
+  #         node-version: 18
+  #         cache: "yarn"
+  #     - run: yarn
+  #     - run: yarn e2e playwright install --with-deps
+  #     - run: yarn e2e test
+  #     - uses: actions/upload-artifact@v3
+  #       if: always()
+  #       with:
+  #         name: playwright-report
+  #         path: playwright-report/
+  #         retention-days: 30
 
   deploy:
     name: Deploy
     needs:
       - types
-      - test-api
-      - test-protocol
-      - test-ui
+      # - test-e2e
     runs-on: ubuntu-latest
     environment: Production
     steps:

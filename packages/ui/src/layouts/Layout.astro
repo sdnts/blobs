@@ -89,7 +89,7 @@ import { Toaster } from "sonner";
       <nav>
         <ul class="flex gap-8">
           <li>
-            <a href="https://github.com/sdnts/blobs" target="_blank"> SOURCE</a>
+            <a href="https://github.com/sdnts/blobs" target="_blank">SOURCE</a>
           </li>
           <li>
             <a href="/about">ABOUT</a>
@@ -97,8 +97,6 @@ import { Toaster } from "sonner";
         </ul>
       </nav>
     </header>
-
-    <slot />
 
     <Toaster
       client:load
@@ -110,6 +108,8 @@ import { Toaster } from "sonner";
       richColors
       duration={5000}
     />
+
+    <slot />
 
     <!-- Analytics -->
     <script defer>

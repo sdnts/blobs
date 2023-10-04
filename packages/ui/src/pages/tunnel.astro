@@ -1,0 +1,10 @@
+---
+import Layout from "../layouts/Layout.astro";
+import { Status } from "../components/Status";
+import { TunnelPage } from "../components/TunnelPage";
+---
+
+<Layout>
+  <Status slot="status" client:idle />
+  <TunnelPage client:load />
+</Layout>

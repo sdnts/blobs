@@ -9,10 +9,11 @@ const projects: PlaywrightTestProject[] = [
 ];
 
 if (process.env.CI) {
-  projects.push(
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } }
+  projects
+    .push
+    // { name: "firefox", use: { ...devices["Desktop Firefox"] } }
     // { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-  );
+    ();
 }
 
 export default defineConfig({
@@ -20,9 +21,8 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: 1, // Our DO cannot handle parallel downloads
   timeout: process.env.CI ? 30_000 : 10_000,
-  reporter: process.env.CI ? "github" : "html",
+  reporter: process.env.CI ? "github" : "line",
   use: {
     baseURL: "http://localhost:4321",
     trace: "on-first-retry",

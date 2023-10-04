@@ -1,7 +1,6 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import { HeroText } from "../components/HeroText";
-import { NewButton } from "../components/NewButton";
 ---
 
 <Layout>
@@ -21,10 +20,32 @@ import { NewButton } from "../components/NewButton";
         <section
           class:list={["flex flex-col gap-6", "mb-[2rem]", "font-normal"]}
         >
-          <NewButton client:load />
+          <button
+            id="new"
+            data-testid="new"
+            type="submit"
+            class:list={[
+              "bg-black text-white",
+              "px-6 py-3",
+              "rounded-lg select-none",
+              "transition-all duration-300 hover:scale-105 hover:shadow-lg active:scale-95 active:shadow-sm",
+              "text-2xl md:text-4xl lg:text-3xl text-center",
+            ]}
+          >
+            Send
+          </button>
+          <script>
+            import { navigate } from "astro:transitions/client";
+            import { store } from "../store";
+
+            const { create } = store.getState();
+            document.querySelector("#new")?.addEventListener("click", () => {
+              create().then(() => navigate("/new"));
+            });
+          </script>
 
           <a
-            href="/tunnel/join"
+            href="/join"
             class:list={[
               "text-black border-2 border-black",
               "px-6 py-3",
