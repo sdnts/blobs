@@ -504,12 +504,14 @@ __metadata:
     "@types/react-dom": 18.2.10
     astro: 3.2.3
     clsx: 2.0.0
+    immer: 10.0.3
     motion: 10.16.4
     partysocket: 0.0.8
     react: 18.2.0
     react-dom: 18.2.0
     sonner: 1.0.3
     tailwindcss: 3.3.3
+    tailwindcss-animate: 1.0.7
     typescript: 5.2.2
     wrangler: 3.11.0
     zustand: 4.4.3
@@ -3615,6 +3617,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"immer@npm:10.0.3":
+  version: 10.0.3
+  resolution: "immer@npm:10.0.3"
+  checksum: 76acabe6f40e752028313762ba477a5d901e57b669f3b8fb406b87b9bb9b14e663a6fbbf5a6d1ab323737dd38f4b2494a4e28002045b88948da8dbf482309f28
+  languageName: node
+  linkType: hard
+
 "import-meta-resolve@npm:^3.0.0":
   version: 3.0.0
   resolution: "import-meta-resolve@npm:3.0.0"
@@ -6424,6 +6433,15 @@ __metadata:
   version: 1.0.0
   resolution: "supports-preserve-symlinks-flag@npm:1.0.0"
   checksum: 53b1e247e68e05db7b3808b99b892bd36fb096e6fba213a06da7fab22045e97597db425c724f2bbd6c99a3c295e1e73f3e4de78592289f38431049e1277ca0ae
+  languageName: node
+  linkType: hard
+
+"tailwindcss-animate@npm:1.0.7":
+  version: 1.0.7
+  resolution: "tailwindcss-animate@npm:1.0.7"
+  peerDependencies:
+    tailwindcss: "*"
+  checksum: c1760983eb3fec0c8421e95082bf308e6845df43e2f90862386366e82545c801b26b4d189c4cd23d6915252b76d18005c8e5f591f8b119944c7fb8650d0f8bce
   languageName: node
   linkType: hard
 

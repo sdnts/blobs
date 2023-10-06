@@ -2,22 +2,30 @@ import clsx from "clsx";
 import { animate, timeline } from "motion";
 import { useEffect, useState } from "react";
 import { useStore } from "../store";
-import ReconnectingWebSocket from "partysocket/ws";
-
-type State = "waiting" | "ready" | "reconnecting";
 
 export const Status = () => {
   const session = useStore((s) => s.session);
-  const [state, setState] = useState<State>("waiting");
 
+  const [state, setState] = useState<
+    "waiting" | "ready" | "reconnecting" | "disconnected"
+  >("waiting");
   useEffect(() => {
-    if (location.pathname === "/tunnel") return setState("ready");
+    // A change in the session's readyState does not cause a store update, which
+    // means there's no way for this component to know when that happens.
+    // So instead of using a straight-forward selector (why would anything be
+    // straight-forward in React anymore?), we have to pull shenanigans to make
+    // sure we always know the correct state of the connection.
+
     if (!session) return setState("waiting");
-    console.log(session.readyState, ReconnectingWebSocket.OPEN);
-    if (session.readyState === ReconnectingWebSocket.OPEN)
-      return setState("ready");
-    return setState("reconnecting");
-  }, [session, session?.readyState]);
+    if (location.pathname !== "/tunnel") return setState("waiting");
+
+    const listener = new AbortController();
+    session?.addEventListener("open", () => setState("ready"));
+    session?.addEventListener("close", () => setState("reconnecting"));
+    session?.addEventListener("error", () => setState("disconnected"));
+
+    return () => listener.abort();
+  }, [session]);
 
   useEffect(() => {
     animate(
@@ -26,6 +34,7 @@ export const Status = () => {
         fill: clsx({
           "#FFA800": state === "waiting" || state === "reconnecting",
           "#8AD22E": state === "ready",
+          "#F52F2F": state === "disconnected",
         }),
       },
       { duration: 0.1 }
@@ -49,9 +58,7 @@ export const Status = () => {
         )}
         data-testid="status"
       >
-        {state === "waiting" && "Waiting"}
-        {state === "ready" && "Ready"}
-        {state === "reconnecting" && "Reconnecting"}
+        {state}
       </span>
     </p>
   );

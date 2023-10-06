@@ -1,0 +1,37 @@
+const size = 16;
+const width = 2;
+const radius = (size - width) / 2;
+
+type Props = { progress: number };
+export const Progress = ({ progress: p }: Props) => {
+  const progress = Math.max(p, 10);
+  const circumference = radius * 2 * Math.PI;
+
+  return (
+    <svg
+      width={`${size}`}
+      height={`${size}`}
+      className="animate-in fade-in animate-out fade-out"
+    >
+      <circle
+        stroke="#CECECE"
+        strokeWidth={`${width}`}
+        fill="transparent"
+        r={`${radius}`}
+        cx={`${size / 2}`}
+        cy={`${size / 2}`}
+      />
+      <circle
+        className="-rotate-90 origin-center"
+        strokeDasharray={`${circumference} ${circumference}`}
+        strokeDashoffset={`${circumference - (progress / 100) * circumference}`}
+        stroke="#232323"
+        strokeWidth={`${width}`}
+        fill="transparent"
+        r={`${radius}`}
+        cx={`${size / 2}`}
+        cy={`${size / 2}`}
+      />
+    </svg>
+  );
+};

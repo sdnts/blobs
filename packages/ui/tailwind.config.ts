@@ -31,7 +31,7 @@ const config: Config = {
       sans: ["Merchant", "Impact"],
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
 
 export default config;
