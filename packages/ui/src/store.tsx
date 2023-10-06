@@ -137,9 +137,10 @@ export const store = createStore<Store>((set, get) => ({
 
       ws.onmessage = (e) => {
         const message = deserializeSessionMessage(e.data);
-        if (!message.ok) return;
+        if (message.err) return;
 
         if (message.val.code === SessionMessageCode.PeerConnected) {
+          toast.dismiss();
           toast("Ready", {
             description: "Drop files here to stream them to the other end!",
           });
@@ -222,7 +223,7 @@ export const store = createStore<Store>((set, get) => ({
     ws.onclose = () => {
       console.log("Disconnected");
     };
-    ws.onerror = () => { };
+    ws.onerror = () => {};
     ws.onmessage = (e) => {
       const message = deserializeSessionMessage(e.data);
       if (message.err) return;

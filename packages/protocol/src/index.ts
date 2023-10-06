@@ -1,5 +1,3 @@
-import { Err, Ok, Result } from "ts-results";
-
 export enum SessionMessageCode {
   Keepalive = 1,
 
@@ -17,12 +15,12 @@ export type SessionMessage =
   | { code: SessionMessageCode.TunnelCreate }
   | { code: SessionMessageCode.TunnelCreated; tunnelId: string }
   | {
-    code: SessionMessageCode.TunnelReady;
-    tunnelId: string;
-    name: string; // File name of the blob
-    size: number; // Size of the blob
-    type: string; // MIME type of the blob
-  };
+      code: SessionMessageCode.TunnelReady;
+      tunnelId: string;
+      name: string; // File name of the blob
+      size: number; // Size of the blob
+      type: string; // MIME type of the blob
+    };
 
 export function serializeSessionMessage(message: SessionMessage): string {
   // Must use string messages here because hibernatable Durable Objects only
@@ -32,10 +30,10 @@ export function serializeSessionMessage(message: SessionMessage): string {
 
 export function deserializeSessionMessage(
   message: string
-): Result<SessionMessage, string> {
+): { err: false; val: SessionMessage } | { err: true; val: string } {
   try {
-    return Ok(JSON.parse(message));
+    return { err: false, val: JSON.parse(message) };
   } catch (e) {
-    return Err(`Deserialization error: ${(e as Error).message}`);
+    return { err: true, val: `Deserialization error: ${(e as Error).message}` };
   }
 }

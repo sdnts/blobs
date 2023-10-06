@@ -58,6 +58,8 @@ jobs:
       # - test-e2e
     runs-on: ubuntu-latest
     environment: Production
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
@@ -66,7 +68,5 @@ jobs:
           cache: "yarn"
       - run: yarn
       - run: yarn ui build
-      - run: yarn api deploy
       - run: yarn ui deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - run: yarn api deploy
