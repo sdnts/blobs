@@ -160,7 +160,7 @@ export class Tunnel implements DurableObject {
       },
       {
         // highWaterMark: 50 * 1024 * 1024, // 50MiB, essentially how many bytes we'll buffer in memory
-        highWaterMark: 10, // Queue upto 10 chunks if the downloader is being slow
+        highWaterMark: 5000, // Queue upto 10 chunks if the downloader is being slow
         size: (chunk) => chunk.byteLength,
       }
     );
