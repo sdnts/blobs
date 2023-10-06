@@ -22,6 +22,7 @@ export const TunnelPage = () => {
   const fileInput = useRef<HTMLInputElement>(null);
   const [dropping, setDropping] = useState(false);
   const onDrop = (files: File[]) => {
+    console.log("Files dropped", files);
     // TODO: Should I create a thread per upload?
     files.map((f) => tunnel().then((tunnelId) => upload(tunnelId, f)));
   };
@@ -117,7 +118,11 @@ export const TunnelPage = () => {
 
 type UploadProps = { tunnelId: string };
 const Upload = ({ tunnelId }: UploadProps) => {
-  const { name, size, uploaded } = useStore((s) => s.tunnels[tunnelId]);
+  const {
+    name,
+    size,
+    progress: uploaded,
+  } = useStore((s) => s.tunnels[tunnelId]);
   const progress = (uploaded / size) * 100;
 
   return (

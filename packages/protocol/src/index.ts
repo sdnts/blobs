@@ -6,7 +6,7 @@ export enum SessionMessageCode {
 
   TunnelCreate = 100,
   TunnelCreated,
-  TunnelReady,
+  TunnelUploaderReady,
 }
 export type SessionMessage =
   | { code: SessionMessageCode.Keepalive }
@@ -15,7 +15,7 @@ export type SessionMessage =
   | { code: SessionMessageCode.TunnelCreate }
   | { code: SessionMessageCode.TunnelCreated; tunnelId: string }
   | {
-      code: SessionMessageCode.TunnelReady;
+      code: SessionMessageCode.TunnelUploaderReady;
       tunnelId: string;
       name: string; // File name of the blob
       size: number; // Size of the blob

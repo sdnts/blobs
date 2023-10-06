@@ -107,7 +107,7 @@ export class Session implements DurableObject {
       });
   }
 
-  async webSocketMessage(_ws: WebSocket, data: string) {
+  async webSocketMessage(ws: WebSocket, data: string) {
     const sessionId = this.state.id.toString();
 
     const message = deserializeSessionMessage(data);
@@ -130,12 +130,13 @@ export class Session implements DurableObject {
       );
     }
 
-    if (message.val.code === SessionMessageCode.TunnelReady) {
+    if (message.val.code === SessionMessageCode.TunnelUploaderReady) {
       const { tunnelId } = message.val;
 
-      console.log({ sessionId, tunnelId }, "Tunnel ready");
+      console.log({ sessionId, tunnelId }, "Tunnel uploader ready");
       return this.state
         .getWebSockets()
+        .filter((w) => w !== ws) // Get WS that aren't the sender
         .forEach((ws) => ws.send(serializeSessionMessage(message.val)));
     }
   }

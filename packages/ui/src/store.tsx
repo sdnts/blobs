@@ -17,7 +17,7 @@ type Store = {
   token?: string;
   secret?: string;
   session?: ReconnectingWebSocket;
-  tunnels: Record<string, { name: string; size: number; uploaded: number }>;
+  tunnels: Record<string, { name: string; size: number; progress: number }>;
 
   restore: () => void;
   create: () => Promise<void>;
@@ -207,41 +207,63 @@ export const store = createStore(
         return;
       }
 
-      const ws = new ReconnectingWebSocket(
+      const session = new ReconnectingWebSocket(
         `${WS_SCHEME}${API_HOST}/session/connect?t=${encodeURIComponent(
           token
         )}`,
         undefined
       );
-      set({ session: ws });
+      const listeners = new AbortController();
+      set({ session });
 
       const keepalive = setInterval(
         () =>
-          ws.send(
+          session.send(
             serializeSessionMessage({ code: SessionMessageCode.Keepalive })
           ),
         10_000
       );
 
-      ws.onopen = () => {
-        console.log("Connected");
-      };
-      ws.onclose = () => {
-        console.log("Disconnected");
-      };
-      ws.onerror = () => {};
-      ws.onmessage = (e) => {
-        const message = deserializeSessionMessage(e.data);
-        if (message.err) return;
+      session.addEventListener(
+        "open",
+        () => {
+          console.log("Connected");
+        },
+        { signal: listeners.signal }
+      );
+      session.addEventListener(
+        "close",
+        () => {
+          console.log("Disconnected");
+        },
+        { signal: listeners.signal }
+      );
+      session.addEventListener(
+        "error",
+        () => {
+          console.log("Disconnected (error)");
+          listeners.abort();
+        },
+        { signal: listeners.signal }
+      );
 
-        if (message.val.code !== SessionMessageCode.TunnelReady) return;
+      session.addEventListener(
+        "message",
+        (e) => {
+          const message = deserializeSessionMessage(e.data);
+          if (message.err) return;
+          if (message.val.code !== SessionMessageCode.TunnelUploaderReady)
+            return;
 
-        const { tunnels } = get();
-        if (tunnels[message.val.tunnelId]) return;
+          // If a tunnel with this ID already exists, it means we've already
+          // initiated a download for it
+          if (get().tunnels[message.val.tunnelId]) return;
 
-        console.log("Downloading", message.val);
-        download(message.val);
-      };
+          console.log("Downloading", message.val);
+          download(message.val);
+        },
+        { signal: listeners.signal }
+      );
 
       return keepalive;
     },
@@ -308,84 +330,151 @@ export const store = createStore(
           token
         )}`
       );
+      const listeners = new AbortController();
 
-      tunnel.onopen = async () => {
-        console.log("Uploading to", tunnelId, {
-          name: file.name,
-          size: file.size,
-          type: file.type || "application/octet-stream",
-        });
-
-        set((s) => {
-          s.tunnels[tunnelId] = {
-            name: file.name,
-            size: file.size,
-            uploaded: 0,
-          };
-        });
-
-        session.send(
-          serializeSessionMessage({
-            code: SessionMessageCode.TunnelReady,
-            tunnelId,
+      tunnel.addEventListener(
+        "open",
+        () => {
+          console.log("Will upload to", tunnelId, {
             name: file.name,
             size: file.size,
             type: file.type || "application/octet-stream",
-          })
-        );
-      };
+          });
 
-      tunnel.onclose = () => {};
-      tunnel.onerror = () => {};
+          set((s) => {
+            s.tunnels[tunnelId] = {
+              name: file.name,
+              size: file.size,
+              progress: 0,
+            };
+          });
+
+          session.send(
+            serializeSessionMessage({
+              code: SessionMessageCode.TunnelUploaderReady,
+              tunnelId,
+              name: file.name,
+              size: file.size,
+              type: file.type || "application/octet-stream",
+            })
+          );
+        },
+        { signal: listeners.signal }
+      );
+
+      tunnel.addEventListener(
+        "close",
+        () => {
+          console.log("Tunnel closed");
+          set((s) => {
+            delete s.tunnels[tunnelId];
+          });
+
+          listeners.abort();
+        },
+        { signal: listeners.signal }
+      );
+
+      tunnel.addEventListener(
+        "error",
+        () => {
+          console.log("Tunnel closed (error)");
+          set((s) => {
+            delete s.tunnels[tunnelId];
+          });
+
+          listeners.abort();
+        },
+        { signal: listeners.signal }
+      );
 
       const stream = file
         .stream()
         .pipeThrough<Uint8Array>(new CompressionStream("gzip"))
         .getReader();
 
-      tunnel.onmessage = async () => {
-        const { done, value: chunk } = await stream.read();
-        if (done) {
-          console.log({ name: file.name, size: file.size }, "Upload finished");
-          set((s) => {
-            s.tunnels[tunnelId].uploaded = s.tunnels[tunnelId].size;
-          });
+      tunnel.addEventListener(
+        "message",
+        async () => {
+          console.debug("Chunk requested");
+          // DO has a 1MiB limit for WebSocket message sizes. We'll play it safe
+          // by assuming it is 1MB
+          const MAX_WS_MESSAGE_SIZE = 1_000_000;
+          // The size of a chunk received via a `file.read()` is browser
+          // implementation-dependent, but I've noticed that this number is 16KiB
+          // for Chromium and Firefox.
+          const HEURISTIC_CHUNK_SIZE = 16384; // 16KiB
 
-          setTimeout(
-            () =>
-              set((s) => {
-                delete s.tunnels[tunnelId];
-              }),
-            5000
-          );
-          tunnel.close(1000);
-          return;
-        }
+          // The browser generally reads files in 16KiB chunks, but DO messages
+          // can be 1MiB in size. Instead of sending over one chunk at a time,
+          // let's try and pack a single WebSocket message with multiple chunks
+          // (this will help massively with transfer speeds).
+          // We'll read from the file stream greedily, appending to a single
+          // message until we run over the DO size limit.
 
-        // DO has a 1MiB incoming message limit, so we'll send 1MB at a time
-        // This allows us ample space for any extra bytes our serialization
-        // might add.
-        const BLOCK_SIZE = 100_000_000;
+          // Allocate a buffer upfront since we know the upper limit of a message's size
+          const msgBuffer = new Uint8Array(MAX_WS_MESSAGE_SIZE);
+          let msgByteLength = 0; // How mmany bytes have we actually filled up
+          let streamEnded = false;
 
-        const numBlocks = Math.ceil(chunk.byteLength / BLOCK_SIZE);
-        for (let i = 0; i < numBlocks; i++) {
-          const offset = i * BLOCK_SIZE;
-          const block = chunk.slice(offset, offset + BLOCK_SIZE);
+          // console.debug(
+          //   { name: file.name },
+          //   `Initialized message buffer with ${msgByteLength} bytes`
+          // );
+
+          // This loop reads from the File stream and appends to the WS message
+          // buffer until it can't no mo'
+          while (true) {
+            // If we expect the next chunk size to overflow the WS message buffer,
+            // stop reading. This is all heuristic so not 100% accurate, but it
+            // saves us from having to deal with overflow bytes
+            if (msgByteLength + HEURISTIC_CHUNK_SIZE > MAX_WS_MESSAGE_SIZE) {
+              break;
+            }
+
+            const { done, value: chunk } = await stream.read();
+            if (done) {
+              streamEnded = true;
+              break;
+            }
+
+            console.debug(
+              { name: file.name },
+              `Appending ${chunk.byteLength} bytes to message buffer`
+            );
+            msgBuffer.set(chunk, msgByteLength);
+            msgByteLength += chunk.byteLength;
+          }
+
           console.debug(
             { name: file.name },
-            `Uploading block ${i + 1}/${numBlocks} with size ${
-              block.byteLength
-            }`
+            `Sending message of size ${msgByteLength}`
           );
-          tunnel.send(block);
-          set((s) => {
-            s.tunnels[tunnelId].uploaded += block.byteLength;
-          });
-        }
 
-        // Mark the chunk boundary
-        tunnel.send(new Uint8Array(0));
-      };
+          tunnel.send(msgBuffer.slice(0, msgByteLength));
+          set((s) => {
+            s.tunnels[tunnelId].progress += msgByteLength;
+          });
+
+          if (streamEnded) {
+            console.log(
+              { name: file.name, size: file.size },
+              "Upload finished"
+            );
+
+            tunnel.close(1000);
+            listeners.abort();
+            setTimeout(
+              () =>
+                set((s) => {
+                  delete s.tunnels[tunnelId];
+                }),
+              5000
+            );
+          }
+        },
+        { signal: listeners.signal }
+      );
     },
 
     download: async ({ tunnelId, name, size, type }) => {
