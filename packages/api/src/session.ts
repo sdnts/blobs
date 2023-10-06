@@ -10,7 +10,7 @@ export class Session implements DurableObject {
   constructor(
     private state: DurableObjectState,
     private env: Env
-  ) { }
+  ) {}
 
   async fetch(request: Request): Promise<Response> {
     return Router()

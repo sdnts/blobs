@@ -4,7 +4,7 @@ export class Tunnel implements DurableObject {
   private createdAt = Date.now();
   private uploader: WebSocket | null = null;
 
-  constructor(private state: DurableObjectState) { }
+  constructor(private state: DurableObjectState) {}
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
