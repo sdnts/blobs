@@ -25,6 +25,7 @@ export const TunnelPage = () => {
     console.log("Files dropped", files);
     // TODO: Should I create a thread per upload?
     files.map((f) => tunnel().then((tunnelId) => upload(tunnelId, f)));
+    fileInput.current!.files = null;
   };
 
   useEffect(() => {

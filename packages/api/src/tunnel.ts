@@ -7,6 +7,15 @@ export class Tunnel implements DurableObject {
   constructor(private state: DurableObjectState) {}
 
   async fetch(request: Request): Promise<Response> {
+    try {
+      return this.handler(request);
+    } catch (e) {
+      console.error({ error: (e as Error).message }, "Uncaught error");
+      return error(500, "Internal error");
+    }
+  }
+
+  async handler(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     const tunnelId = this.state.id.toString();
@@ -108,7 +117,7 @@ export class Tunnel implements DurableObject {
           // isn't trivial, and I'd rather have _something_ working.
           // Returning a Promise here is how we signal to the ReadableStream to
           // only have one running `pull` at a time.
-          return new Promise((resolve, reject) => {
+          return new Promise<void>((resolve, reject) => {
             const listeners = new AbortController();
 
             uploader.addEventListener(
@@ -119,6 +128,7 @@ export class Tunnel implements DurableObject {
                   "Blob transfer complete"
                 );
                 controller.close();
+
                 listeners.abort();
                 return resolve();
               },
@@ -137,7 +147,6 @@ export class Tunnel implements DurableObject {
 
                 console.debug("Enqueueing", e.data.byteLength);
                 controller.enqueue(new Uint8Array(e.data));
-                console.debug("Enqueued", e.data.byteLength);
 
                 listeners.abort();
                 return resolve();
@@ -146,8 +155,15 @@ export class Tunnel implements DurableObject {
             );
 
             // Request a chunk
-            console.debug("Requesting chunk");
             uploader.send("");
+          }).catch((e) => {
+            console.error(
+              { error: (e as Error).message },
+              "Pull Promise rejection"
+            );
+
+            controller.error(1001);
+            return Promise.reject(1001);
           });
         },
         cancel(reason) {
@@ -158,7 +174,7 @@ export class Tunnel implements DurableObject {
       {
         // Queue upto 10 chunks in memory if the downloader is
         // being slow. This roughly translates to 10MiB
-        highWaterMark: 1,
+        highWaterMark: 10,
         size: (chunk) => chunk.byteLength,
       }
     );
@@ -181,11 +197,11 @@ export class Tunnel implements DurableObject {
       headers: {
         Connection: "close",
         "Content-Type": type,
-        // Technically always incorrect because of gzip, but Chromium treats this
-        // as a hint to show a real progress bar for this download
-        "Content-Length": size,
         "Content-Disposition": `attachment; filename=\"${filename}\"`,
         "Content-Encoding": "gzip",
+        // We can't know the size of the resulting file because it is gzipped
+        // by the client before uploading, so we can't set a Content-Length header
+        // here
       },
     });
   }
