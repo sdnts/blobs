@@ -462,8 +462,11 @@ export const store = createStore(
               "Upload finished"
             );
 
-            tunnel.close(1000);
             listeners.abort();
+            tunnel.close(1000);
+            set((s) => {
+              s.tunnels[tunnelId].progress = file.size;
+            });
             setTimeout(
               () =>
                 set((s) => {

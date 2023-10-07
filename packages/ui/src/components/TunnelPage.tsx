@@ -1,4 +1,4 @@
-import { CloudArrowUp } from "@phosphor-icons/react";
+import { Check, CloudArrowUp } from "@phosphor-icons/react";
 import clsx from "clsx";
 import { useEffect, useRef, useState } from "react";
 import { useStore } from "../store";
@@ -127,13 +127,13 @@ const Upload = ({ tunnelId }: UploadProps) => {
 
   return (
     <>
-      <span className="text-lg text-right animate-in fade-in animate-out fade-out">
-        {name}
-      </span>
-      <span className="text-lg text-gray animate-in fade-in animate-out fade-out">
-        {formatSize(size)}
-      </span>
-      <Progress progress={progress} />
+      <span className="text-lg text-right">{name}</span>
+      <span className="text-lg text-gray">{formatSize(size)}</span>
+      {progress < 100 ? (
+        <Progress progress={progress} />
+      ) : (
+        <Check weight="bold" size={16} />
+      )}
     </>
   );
 };

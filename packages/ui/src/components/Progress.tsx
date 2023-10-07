@@ -8,11 +8,7 @@ export const Progress = ({ progress: p }: Props) => {
   const circumference = radius * 2 * Math.PI;
 
   return (
-    <svg
-      width={`${size}`}
-      height={`${size}`}
-      className="animate-in fade-in animate-out fade-out"
-    >
+    <svg width={`${size}`} height={`${size}`}>
       <circle
         stroke="#CECECE"
         strokeWidth={`${width}`}
