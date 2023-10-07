@@ -9,34 +9,32 @@ test("can join a session", async ({ page: peer2, context }) => {
 
   await peer2.goto("/");
   await peer2.getByTestId("join").click();
-  await expect(peer2).toHaveURL(/\/join/);
+  await expect(peer2).toHaveURL(/.*join/);
   await expect(peer2.getByTestId("toast-join")).toBeVisible();
 
-  await peer2.getByTestId("secret").type(secret!);
+  await peer2.getByTestId("secret").fill(secret!);
 
-  await expect(peer2).toHaveURL(/tunnel$/);
-  await expect(peer2.getByTestId("status")).toHaveText("Ready");
+  await expect(peer2).toHaveURL(/.*tunnel/);
+  await expect(peer2.getByTestId("status")).toHaveText("ready");
 });
 
 test.skip("rejects incorrect secrets", async () => {});
 
-test.skip("can transfer a file to peer 1", async ({ page: peer2, context }) => {
-  // Workerd just crashes here :/
-  const peer1 = await context.newPage();
-  await peer1.goto("/");
-  // peer2.on("console", (msg) => console.log("Peer2:", msg.text()));
+test("can transfer a file to the other peer", async ({ page, context }) => {
+  const peer = await context.newPage();
+  await peer.goto("/");
 
-  await peer1.getByTestId("new").click();
-  const secret = await peer1.getByTestId("secret").textContent();
+  await peer.getByTestId("new").click();
+  const secret = await peer.getByTestId("secret").textContent();
 
-  await peer2.goto("/");
-  await peer2.getByTestId("join").click();
-  await peer2.getByTestId("secret").type(secret!);
+  await page.goto("/");
+  await page.getByTestId("join").click();
+  await page.getByTestId("secret").fill(secret!);
 
-  const filePickerPromise = peer2.waitForEvent("filechooser");
-  const downloadPromise = peer1.waitForEvent("download");
+  const filePickerPromise = page.waitForEvent("filechooser");
+  const downloadPromise = peer.waitForEvent("download");
 
-  await peer2.getByTestId("upload").click();
+  await page.getByTestId("upload").click();
   const fileChooser = await filePickerPromise;
   await fileChooser.setFiles({
     name: "installer.dmg",
@@ -52,7 +50,7 @@ test.skip("can transfer a file to peer 1", async ({ page: peer2, context }) => {
         let content = "";
         stream?.on("end", () => r(content));
         stream?.on("readable", () => {
-          let chunk;
+          let chunk: string;
           while (null !== (chunk = stream.read()))
             content = content.concat(chunk);
         });

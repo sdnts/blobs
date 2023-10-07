@@ -5,11 +5,11 @@ test("can create a session", async ({ page }) => {
 
   await page.getByTestId("new").click();
   await expect(page.getByTestId("toast-success")).toBeVisible();
-  await expect(page).toHaveURL(/\/new$/);
+  await expect(page).toHaveURL(/.*new/);
 
   await expect(page.getByTestId("secret")).toBeVisible();
   await expect(page.getByTestId("toast-success")).toBeVisible();
-  await expect(page.getByTestId("status")).toHaveText("Waiting");
+  await expect(page.getByTestId("status")).toHaveText("waiting");
 });
 
 test("waits for peer to join", async ({ page: peer1, context }) => {
@@ -22,30 +22,26 @@ test("waits for peer to join", async ({ page: peer1, context }) => {
   const peer2 = await context.newPage();
   await peer2.goto("/");
   await peer2.getByTestId("join").click();
-  await peer2.getByTestId("secret").type(secret!);
+  await peer2.getByTestId("secret").fill(secret!);
 
-  await expect(peer1).toHaveURL(/tunnel$/);
-  await expect(peer1.getByTestId("status")).toHaveText("Ready");
+  await expect(peer1).toHaveURL(/.*tunnel/);
+  await expect(peer1.getByTestId("status")).toHaveText("ready");
 });
 
-test.skip("can transfer a file to the other peer", async ({
-  page: peer1,
-  context,
-}) => {
-  // Workerd just crashes here :/
-  await peer1.goto("/");
-  await peer1.getByTestId("new").click();
-  const secret = await peer1.getByTestId("secret").textContent();
+test("can transfer a file to the other peer", async ({ page, context }) => {
+  await page.goto("/");
+  await page.getByTestId("new").click();
+  const secret = await page.getByTestId("secret").textContent();
 
-  const peer2 = await context.newPage();
-  await peer2.goto("/");
-  await peer2.getByTestId("join").click();
-  await peer2.getByTestId("secret").type(secret!);
+  const peer = await context.newPage();
+  await peer.goto("/");
+  await peer.getByTestId("join").click();
+  await peer.getByTestId("secret").fill(secret!);
 
-  const filePickerPromise = peer1.waitForEvent("filechooser");
-  const downloadPromise = peer2.waitForEvent("download");
+  const filePickerPromise = page.waitForEvent("filechooser");
+  const downloadPromise = peer.waitForEvent("download");
 
-  await peer1.getByTestId("upload").click();
+  await page.getByTestId("upload").click();
   const fileChooser = await filePickerPromise;
   await fileChooser.setFiles({
     name: "installer.dmg",
@@ -61,7 +57,7 @@ test.skip("can transfer a file to the other peer", async ({
         let content = "";
         stream?.on("end", () => r(content));
         stream?.on("readable", () => {
-          let chunk;
+          let chunk: string;
           while (null !== (chunk = stream.read()))
             content = content.concat(chunk);
         });

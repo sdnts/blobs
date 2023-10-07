@@ -17,7 +17,7 @@ export const Status = () => {
     // sure we always know the correct state of the connection.
 
     if (!session) return setState("waiting");
-    if (location.pathname !== "/tunnel") return setState("waiting");
+    if (!location.pathname.includes("/tunnel")) return setState("waiting");
 
     const listener = new AbortController();
     session?.addEventListener("open", () => setState("ready"));
