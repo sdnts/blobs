@@ -24,7 +24,17 @@ export const TunnelPage = () => {
   const onDrop = (files: File[]) => {
     console.log("Files dropped", files);
     // TODO: Should I create a thread per upload?
-    files.map((f) => tunnel().then((tunnelId) => upload(tunnelId, f)));
+    // Our session has no multiplexing capabilities right now, so we run into
+    // ordering issues if we send too many messages at the same time, so let's
+    // stagger our tunnel creations if multiple files are dropped.
+    // This isn't elegant, and the 1s number is _mostly_ arbitrary (our Session
+    // DO is likely nearby geographically, and with a TCP stream open, it is
+    // likely that 1s is enough time for messages to reach it)
+    files.forEach((f, i) => {
+      setTimeout(() => {
+        tunnel().then((tunnelId) => upload(tunnelId, f));
+      }, i * 1000);
+    });
     fileInput.current!.files = null;
   };
 
