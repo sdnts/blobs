@@ -145,7 +145,7 @@ export class Tunnel implements DurableObject {
                   return reject(1003);
                 }
 
-                console.debug("Enqueueing", e.data.byteLength);
+                // console.debug("Enqueueing", e.data.byteLength);
                 controller.enqueue(new Uint8Array(e.data));
 
                 listeners.abort();
