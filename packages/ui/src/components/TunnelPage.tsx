@@ -83,7 +83,7 @@ export const TunnelPage = () => {
       )}
 
       <section id="files" className="flex flex-col items-center">
-        <div className="mt-36 flex flex-col items-center gap-3 text-2xl text-gray">
+        <div className="mt-36 flex flex-col items-center gap-3 text-2xl text-gray dark:text-lightGray">
           <CloudArrowUp weight="bold" size={24} />
 
           <button

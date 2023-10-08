@@ -21,7 +21,7 @@ export const NewPage = () => {
         id="secret"
         className={clsx("flex flex-col items-center gap-4", "mt-36")}
       >
-        <span className="text-gray text-2xl tracking-normal">
+        <span className="text-gray dark:text-lightGray text-2xl tracking-normal">
           Use this secret to receive
         </span>
         <span

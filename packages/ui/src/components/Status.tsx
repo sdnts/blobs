@@ -50,7 +50,7 @@ export const Status = () => {
     <p className="overflow-hidden">
       <span
         className={clsx(
-          "text-md text-gray",
+          "text-md text-gray dark:text-lightGray",
           "mt-[0.2rem]", // IDK, I think the font's baseline is messed up?
           "cursor-default select-none",
           "block",
