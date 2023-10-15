@@ -26,7 +26,7 @@ don't keep a copy of your files, I am not a security expert.
 
 Tunnels you create are locked behind you. After both parties join, information
 about locating the tunnel (its ID) is destroyed, so one else can snoop on your
-files. There are 16^32 valid tunnel IDs to discourage so brute-forcing.
+files. There are 16^32 valid tunnel IDs to discourage brute-forcing.
 
 ### Development
 
