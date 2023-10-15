@@ -9,6 +9,7 @@ import { shallow } from "zustand/shallow";
 import { useStoreWithEqualityFn } from "zustand/traditional";
 import { createStore } from "zustand/vanilla";
 import { immer } from "zustand/middleware/immer";
+import { CheckCircle, WarningCircle, X } from "@phosphor-icons/react";
 
 const WS_SCHEME = import.meta.env.DEV ? "ws://" : "wss://";
 const API_HOST = import.meta.env.DEV ? "localhost:8787" : "api.blob.city";
@@ -66,6 +67,7 @@ export const store = createStore(
         toast.success("Tunnel created", {
           id: t,
           duration: Infinity,
+          icon: <CheckCircle weight="duotone" size={16} />,
           description: (
             <span data-testid="toast-success">
               Use the secret <strong>{secret}</strong> to join this tunnel
@@ -80,6 +82,7 @@ export const store = createStore(
         toast.error("Could not create tunnel", {
           id: t,
           duration: 10_000,
+          icon: <WarningCircle weight="duotone" size={16} />,
           description: (
             <span>
               Please try again in a bit, or{" "}
@@ -145,7 +148,8 @@ export const store = createStore(
 
           if (message.val.code === SessionMessageCode.PeerConnected) {
             toast.dismiss();
-            toast("Ready", {
+            toast.success("Ready", {
+              icon: <CheckCircle weight="duotone" size={16} />,
               description: "Drop files here to stream them to the other end!",
             });
 
@@ -167,7 +171,8 @@ export const store = createStore(
 
         if (res.status !== 200) throw new Error();
 
-        toast("Ready", {
+        toast.success("Ready", {
+          icon: <CheckCircle weight="duotone" size={16} />,
           description: "Drop files here to stream them to the other end!",
         });
 
@@ -180,6 +185,7 @@ export const store = createStore(
       } catch (e) {
         toast.error("Could not join tunnel, is your secret correct?", {
           duration: 10_000,
+          icon: <WarningCircle weight="duotone" size={16} />,
           description: (
             <a
               href="https://github.com/sdnts/blobs/issues/new"
