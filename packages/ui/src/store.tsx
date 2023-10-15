@@ -114,13 +114,10 @@ export const store = createStore(
       }
 
       const ws = new ReconnectingWebSocket(
-        `${WS_SCHEME}${API_HOST}/session/connect?t=${encodeURIComponent(
-          token
-        )}`,
-        undefined
+        `${WS_SCHEME}${API_HOST}/session/connect?t=${encodeURIComponent(token)}`
       );
 
-      return new Promise((resolve) => {
+      return new Promise((resolve, reject) => {
         let keepalive: NodeJS.Timer;
 
         ws.onopen = () => {
@@ -133,13 +130,15 @@ export const store = createStore(
             10_000
           );
         };
-        ws.onclose = () => {
-          console.log("Disconnected");
+        ws.onclose = (e) => {
+          console.log("Disconnected", e.reason);
           clearInterval(keepalive);
+          reject();
         };
-        ws.onerror = () => {
-          console.log("Disconnected (error)");
+        ws.onerror = (e) => {
+          console.log("Disconnected (error)", e.error);
           clearInterval(keepalive);
+          reject();
         };
 
         ws.onmessage = (e) => {
