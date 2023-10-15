@@ -78,6 +78,9 @@ export const JoinPage = () => {
             setSecret(e.currentTarget.value.toUpperCase())
           }
         />
+        <span className="text-gray dark:text-lightGray text-2xl">
+          This is displayed on the host
+        </span>
       </section>
     </main>
   );
