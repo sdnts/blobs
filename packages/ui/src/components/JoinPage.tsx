@@ -54,7 +54,7 @@ export const JoinPage = () => {
   return (
     <main className="flex-1 flex flex-col items-center gap-8 pt-36">
       <section id="secret" className="flex flex-col items-center gap-8">
-        <span className="text-gray dark:text-lightGray text-2xl">Secret</span>
+        <span className="text-gray dark:text-lightGray text-4xl">Secret</span>
         <input
           ref={secretInput}
           name="secret"
@@ -62,7 +62,7 @@ export const JoinPage = () => {
           className={clsx(
             "w-[9ch]",
             "px-4 pt-6 pb-2",
-            "font-bold text-9xl text-center text-black dark:text-black",
+            "font-bold text-7xl md:text-9xl text-center text-black dark:text-black",
             "bg-lightGray dark:bg-white rounded-md",
             "focus:outline outline-black dark:outline-white outline-4"
           )}

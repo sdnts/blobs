@@ -29,7 +29,6 @@ const config: Config = {
     },
     fontFamily: {
       sans: ["Merchant", "Impact"],
-      secondary: ["ui-sans-serif"],
     },
   },
   plugins: [],

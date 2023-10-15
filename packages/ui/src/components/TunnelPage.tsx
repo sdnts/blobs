@@ -114,7 +114,7 @@ export const TunnelPage = () => {
           <ul
             className={clsx(
               "mt-24 text-2xl",
-              "grid grid-cols-3 gap-4 items-center"
+              "grid grid-cols-8 gap-4 items-center"
             )}
           >
             {tunnelIds.map((t) => (
@@ -138,7 +138,7 @@ const Upload = ({ tunnelId }: UploadProps) => {
 
   return (
     <>
-      <span className="text-lg text-right">{name}</span>
+      <span className="col-span-6 text-lg text-right break-all">{name}</span>
       <span className="text-lg text-gray">{formatSize(size)}</span>
       {progress < 100 ? (
         <Progress progress={progress} />
