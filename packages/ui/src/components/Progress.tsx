@@ -10,7 +10,7 @@ export const Progress = ({ progress: p }: Props) => {
   return (
     <svg width={`${size}`} height={`${size}`}>
       <circle
-        stroke="#CECECE"
+        className="dark:stroke-gray stroke-lightGray"
         strokeWidth={`${width}`}
         fill="transparent"
         r={`${radius}`}
@@ -18,10 +18,9 @@ export const Progress = ({ progress: p }: Props) => {
         cy={`${size / 2}`}
       />
       <circle
-        className="-rotate-90 origin-center"
+        className="-rotate-90 origin-center dark:stroke-white stroke-black"
         strokeDasharray={`${circumference} ${circumference}`}
         strokeDashoffset={`${circumference - (progress / 100) * circumference}`}
-        stroke="#232323"
         strokeWidth={`${width}`}
         fill="transparent"
         r={`${radius}`}
