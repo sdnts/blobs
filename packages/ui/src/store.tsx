@@ -49,12 +49,10 @@ export const store = createStore(
       }),
 
     create: async () => {
+      toast.dismiss();
       const t = toast.loading("Creating tunnel");
 
       try {
-        set({ token: undefined, secret: undefined });
-        sessionStorage.clear();
-
         const res = await fetch(`//${API_HOST}/session/create`, {
           method: "PUT",
         });
@@ -160,10 +158,9 @@ export const store = createStore(
     },
 
     join: async (secret) => {
-      try {
-        set({ token: undefined, secret });
-        sessionStorage.clear();
+      toast.dismiss();
 
+      try {
         const res = await fetch(`//${API_HOST}/session/join?s=${secret}`, {
           method: "PUT",
         });
