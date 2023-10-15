@@ -127,7 +127,7 @@ export const store = createStore(
               ws.send(
                 serializeSessionMessage({ code: SessionMessageCode.Keepalive })
               ),
-            10_000
+            5000
           );
         };
         ws.onclose = (e) => {
