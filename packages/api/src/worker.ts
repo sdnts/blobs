@@ -11,7 +11,8 @@ export type Env = {
   tunnels: DurableObjectNamespace;
 };
 
-const nanoid = customAlphabet("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ", 6);
+// I've removed `0` & `O` from the nanoid alphabet since they look similar
+const nanoid = customAlphabet("123456789ABCDEFGHIJKLMNPQRSTUVWXYZ", 6);
 
 export { Session } from "./session";
 export { Tunnel } from "./tunnel";
