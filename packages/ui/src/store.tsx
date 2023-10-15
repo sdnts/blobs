@@ -59,7 +59,7 @@ export const store = createStore(
 
         if (res.status !== 200) throw new Error();
 
-        const { token, secret } = await res.json();
+        const { token, secret } = await res.json<Record<string, string>>();
         if (!token || !secret) throw new Error();
 
         toast.success("Tunnel created", {
@@ -172,7 +172,7 @@ export const store = createStore(
           description: "Drop files here to stream them to the other end!",
         });
 
-        const { token } = await res.json();
+        const { token } = await res.json<Record<string, string>>();
         if (!token) throw new Error();
 
         set({ token });
