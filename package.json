@@ -15,7 +15,7 @@
   },
   "devDependencies": {
     "prettier": "3.0.3",
-    "prettier-plugin-astro": "0.12.0"
+    "prettier-plugin-astro": "0.12.1"
   },
   "prettier": {
     "trailingComma": "es5",

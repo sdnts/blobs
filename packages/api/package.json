@@ -11,14 +11,13 @@
   "dependencies": {
     "@blobs/protocol": "workspace:*",
     "itty-router": "4.0.23",
-    "nanoid": "5.0.1"
+    "nanoid": "5.0.2"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "4.20231010.0",
-    "@edge-runtime/vm": "3.1.4",
-    "@types/ws": "8.5.7",
+    "@cloudflare/workers-types": "4.20231025.0",
+    "@types/ws": "8.5.8",
     "typescript": "5.2.2",
-    "wrangler": "3.13.1",
+    "wrangler": "3.15.0",
     "ws": "8.14.2"
   }
 }
